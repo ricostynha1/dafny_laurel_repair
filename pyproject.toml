@@ -1,0 +1,50 @@
+[tool.poetry]
+name = "proof-repair"
+version = "0.1.0"
+description = "Tool to automatically fix Dafny proofs"
+authors = ["emugnier <emugnier@ucsd.edu>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+openai = "0.28.1"
+
+
+[tool.poetry.group.dev.dependencies]
+flake8 = "^6.1.0"
+black = "^23.10.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.flake8]
+exclude = '''
+  .git
+  __pycache__
+  .venv
+  .mypy_cache
+  .tox
+  _build
+  buck-out
+  build
+  dist
+  *.ipynb_checkpoints
+'''
+
+[tool.black]
+exclude = '''
+/(
+  \.git
+| \.hg
+| \.mypy_cache
+| \.tox
+| \.venv
+| _build
+| buck-out
+| build
+| dist
+| .*ipynb_checkpoints.*
+)/
+'''

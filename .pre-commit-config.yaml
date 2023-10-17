@@ -1,0 +1,14 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.0.1
+  hooks:
+    - id: trailing-whitespace
+    - id: end-of-file-fixer
+
+- repo: local
+  hooks:
+    - id: poetry-run-flake8-black
+      name: poetry run flake8 and black
+      entry: poetry run flake8 && poetry run black --check --diff
+      language: system
+      types: [python]
