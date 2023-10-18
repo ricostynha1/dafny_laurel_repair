@@ -1,5 +1,30 @@
 import argparse
+import os
 import subprocess
+import yaml
+
+
+def parse_config(config_file):
+    with open(config_file, "r") as stream:
+        try:
+            config_data = yaml.safe_load(stream)
+            results_dir = config_data.get("results_dir")
+            if not os.path.exists(results_dir):
+                os.makedirs(results_dir)
+            methods_data = config_data.get("methods", [])
+
+            methods_list = []
+            for method_data in methods_data:
+                file_path = method_data.get("file_path")
+                method_name = method_data.get("method_name")
+
+                if file_path and method_name:
+                    method = Method(file_path, method_name)
+                    methods_list.append(method)
+
+            return results_dir, methods_list
+        except yaml.YAMLError as exc:
+            print(exc)
 
 
 class Method:
@@ -9,18 +34,23 @@ class Method:
         self.verification_time = None
         self.verification_result = None
         self.error_message = None
+        self.dafny_log_file = None
 
-    def run_verification(self):
-        # TODO changne the log file name a result directory
+    def parse_verification_outcome(self):
+        pass
+
+    def run_verification(self, results_directory):
         dafny_command = [
             "dafny",
             "verify",
             "--boogie-filter",
             f"*{self.method_name}*",
             "--log-format",
-            f"text;LogFileName={self.method_name}",
+            f"text;LogFileName={results_directory}/{self.method_name}.txt",
             self.file_path,
         ]
+
+        self.dafny_log_file = f"{results_directory}/{self.method_name}.txt"
 
         try:
             subprocess.run(dafny_command, check=True, capture_output=True, text=True)
@@ -41,20 +71,14 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Run Dafny verification for specified methods."
     )
-    parser.add_argument("file_path", help="Path to the Dafny file")
+    parser.add_argument("config_file", help="Path to the YAML config file")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_arguments()
 
-    # TODO need to change to a config file where methods are defined per file
-    method_names = ["UnitIsUnique"]
-
-    methods = [Method(args.file_path, method_name) for method_name in method_names]
+    results_dir, methods = parse_config(args.config_file)
 
     for method in methods:
-        method.run_verification()
-
-    for method in methods:
-        print(method)
+        method.run_verification(results_dir)

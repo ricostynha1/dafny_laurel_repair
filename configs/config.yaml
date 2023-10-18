@@ -1,0 +1,4 @@
+results_dir: ./results
+methods:
+  - file_path: ../test_projects/verification_optimization/unital.dfy
+    method_name: UnitIsUnique
