@@ -9,29 +9,21 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11"
 openai = "0.28.1"
+ruff = "^0.1.0"
 
 
 [tool.poetry.group.dev.dependencies]
-flake8 = "^6.1.0"
 black = "^23.10.0"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.flake8]
-exclude = '''
-  .git
-  __pycache__
-  .venv
-  .mypy_cache
-  .tox
-  _build
-  buck-out
-  build
-  dist
-  *.ipynb_checkpoints
-'''
+[tool.ruff]
+exclude = [
+  ".ipynb_checkpoints",
+  ".pre-commit-config.yaml",
+]
 
 [tool.black]
 exclude = '''
@@ -46,5 +38,6 @@ exclude = '''
 | build
 | dist
 | .*ipynb_checkpoints.*
+| .pre-commit-config.yaml
 )/
 '''
