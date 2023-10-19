@@ -1,7 +1,99 @@
 import argparse
 import os
+import re
 import subprocess
 import yaml
+
+
+def parse_assertion_results(file_path):
+    with open(file_path, "r") as f:
+        data = f.read()
+    assertion_batches = re.split(r"\n(?=\s*Results for \w+)", data)[1:]
+
+    result = []
+    for batch in assertion_batches:
+        if not batch:
+            continue
+        function_match = re.search(r"Results for (\w+) \((\w+)\)", batch)
+        if function_match:
+            function_name = function_match.group(1)
+            verification_type = function_match.group(2)
+        else:
+            function_name = None
+            verification_type = None
+
+        overall_outcome_match = re.search(r"Overall outcome: (\w+)", batch)
+        overall_time_match = re.search(r"Overall time: (.+)", batch)
+        overall_resource_count_match = re.search(
+            r"Overall resource count: (\d+)", batch
+        )
+        max_batch_time_match = re.search(r"Maximum assertion batch time: (.+)", batch)
+        max_batch_resource_count_match = re.search(
+            r"Maximum assertion batch resource count: (\d+)", batch
+        )
+        batch_info_matches = re.finditer(
+            r"Assertion batch (\d+):([\s\S]*?)(?=\n\s*Assertion batch \d+|$)", batch
+        )
+
+        batches_info = []
+        for batch_info_match in batch_info_matches:
+            batch_number = int(batch_info_match.group(1))
+            batch_info = batch_info_match.group(2).strip()
+
+            outcome_match = re.search(r"Outcome: (\w+)", batch_info)
+            duration_match = re.search(r"Duration: (.+)", batch_info)
+            resource_count_match = re.search(r"Resource count: (\d+)", batch_info)
+
+            batch_data = {
+                "batch_number": batch_number,
+                "overall_outcome": outcome_match.group(1) if outcome_match else None,
+                "duration": duration_match.group(1) if duration_match else None,
+                "resource_count": int(resource_count_match.group(1))
+                if resource_count_match
+                else None,
+            }
+
+            assertions_info = []
+            assertions_matches = re.finditer(
+                r"(\w+\.\w+)\((\d+),(\d+)\): (.+)", batch_info
+            )
+            for match in assertions_matches:
+                file_name, line, character, assertion_result = match.groups()
+
+                assertions_info.append(
+                    {
+                        "filename": file_name,
+                        "line": int(line),
+                        "character": int(character),
+                        "assertion_result": assertion_result,
+                    }
+                )
+
+            batch_data["assertions"] = assertions_info
+            batches_info.append(batch_data)
+
+        function_data = {
+            "function_name": function_name,
+            "verification_type": verification_type,
+            "overall_outcome": overall_outcome_match.group(1)
+            if overall_outcome_match
+            else None,
+            "overall_time": overall_time_match.group(1) if overall_time_match else None,
+            "overall_resource_count": int(overall_resource_count_match.group(1))
+            if overall_resource_count_match
+            else None,
+            "max_batch_time": max_batch_time_match.group(1)
+            if max_batch_time_match
+            else None,
+            "max_batch_resource_count": int(max_batch_resource_count_match.group(1))
+            if max_batch_resource_count_match
+            else None,
+            "batches": batches_info,
+        }
+
+        result.append(function_data)
+
+    return result
 
 
 def parse_config(config_file):
@@ -36,9 +128,6 @@ class Method:
         self.error_message = None
         self.dafny_log_file = None
 
-    def parse_verification_outcome(self):
-        pass
-
     def run_verification(self, results_directory):
         dafny_command = [
             "dafny",
@@ -55,10 +144,11 @@ class Method:
         try:
             subprocess.run(dafny_command, check=True, capture_output=True, text=True)
 
-            self.verification_time = 0
-            self.verification_result = True
-
-            print(f"Verification successful for method '{self.method_name}'.")
+            self.verification_outcome = parse_assertion_results(self.dafny_log_file)
+            self.verification_result = (
+                self.verification_outcome[0]["overall_outcome"] == "Correct"
+            )
+            self.verification_time = self.verification_outcome[0]["overall_time"]
         except subprocess.CalledProcessError as e:
             self.error_message = e.stdout
             self.verification_result = False
@@ -82,3 +172,4 @@ if __name__ == "__main__":
 
     for method in methods:
         method.run_verification(results_dir)
+        print(method)
