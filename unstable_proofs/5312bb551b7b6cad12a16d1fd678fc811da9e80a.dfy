@@ -1,5 +1,5 @@
   /* is true if there are no duplicate values in the sequence */
-  predicate {:opaque} HasNoDuplicates<T>(s: seq<T>) 
+  predicate {:opaque} HasNoDuplicates<T>(s: seq<T>)
   {
     (forall i, j {:trigger s[i], s[j]}:: 0 <= i < |s| && 0 <= j < |s| && i != j ==> s[i] != s[j])
   }
@@ -19,4 +19,4 @@
         assert forall i, j {:trigger c[i], c[j]}:: i != j && 0 <= i < |a| && |a| <= j < |c| ==> c[i] in multiset(a) && c[j] in multiset(b) && c[i] != c[j];
     }
   }
-https://github.com/dafny-lang/libraries/pull/65/commits/5312bb551b7b6cad12a16d1fd678fc811da9e80a
+# https://github.com/dafny-lang/libraries/pull/65/commits/5312bb551b7b6cad12a16d1fd678fc811da9e80a

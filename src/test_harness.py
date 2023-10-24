@@ -3,6 +3,7 @@ import os
 import re
 import subprocess
 import yaml
+from llm_prompt import Llm_prompt
 
 
 def parse_assertion_results(file_path):
@@ -96,25 +97,42 @@ def parse_assertion_results(file_path):
     return result
 
 
+def get_invalid_batches(result_outcome):
+    invalid_batches = [
+        batch for batch in result_outcome if batch["overall_outcome"] == "Invalid"
+    ]
+    return invalid_batches
+
+
+def get_valid_batches_by_time(result_outcome):
+    valid_batches = [
+        batch for batch in result_outcome if batch["overall_outcome"] == "Valid"
+    ]
+    sorted_batches = sorted(
+        valid_batches, key=lambda x: x["max_batch_time"], reverse=True
+    )
+    return sorted_batches
+
+
 def parse_config(config_file):
     with open(config_file, "r") as stream:
         try:
             config_data = yaml.safe_load(stream)
-            results_dir = config_data.get("results_dir")
+            results_dir = config_data.get("Results_dir")
             if not os.path.exists(results_dir):
                 os.makedirs(results_dir)
-            methods_data = config_data.get("methods", [])
+            methods_data = config_data.get("Methods", [])
 
             methods_list = []
             for method_data in methods_data:
-                file_path = method_data.get("file_path")
-                method_name = method_data.get("method_name")
+                file_path = method_data.get("File_path")
+                method_name = method_data.get("Method_name")
 
                 if file_path and method_name:
                     method = Method(file_path, method_name)
                     methods_list.append(method)
 
-            return results_dir, methods_list
+            return methods_list, config_data
         except yaml.YAMLError as exc:
             print(exc)
 
@@ -143,15 +161,13 @@ class Method:
 
         try:
             subprocess.run(dafny_command, check=True, capture_output=True, text=True)
-
-            self.verification_outcome = parse_assertion_results(self.dafny_log_file)
-            self.verification_result = (
-                self.verification_outcome[0]["overall_outcome"] == "Correct"
-            )
-            self.verification_time = self.verification_outcome[0]["overall_time"]
         except subprocess.CalledProcessError as e:
             self.error_message = e.stdout
-            self.verification_result = False
+        self.verification_outcome = parse_assertion_results(self.dafny_log_file)
+        self.verification_result = (
+            self.verification_outcome[0]["overall_outcome"] == "Correct"
+        )
+        self.verification_time = self.verification_outcome[0]["overall_time"]
 
     def __str__(self):
         return f"Method: {self.method_name}\nVerification time: {self.verification_time} seconds\nVerification result: {self.verification_result}"
@@ -168,8 +184,19 @@ def parse_arguments():
 if __name__ == "__main__":
     args = parse_arguments()
 
-    results_dir, methods = parse_config(args.config_file)
+    methods, config = parse_config(args.config_file)
+
+    llm_prompt = Llm_prompt(
+        config["Prompt"]["System_prompt"], config["Prompt"]["Context"]
+    )
 
     for method in methods:
-        method.run_verification(results_dir)
+        method.run_verification(config["Results_dir"])
         print(method)
+        response = llm_prompt.generate_fix(
+            method.file_path,
+            method.method_name,
+            config["Prompt"]["Fix_prompt"],
+            config["Model_parameters"],
+        )
+    print(response["choices"][0]["message"]["content"])
