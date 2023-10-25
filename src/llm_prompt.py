@@ -1,6 +1,6 @@
 import openai
 import os
-import re
+from utils import extract_method_or_lemma
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
@@ -27,24 +27,10 @@ class Llm_prompt:
             messages.append({"role": "assistant", "content": assistant_content})
         self.messages = messages
 
-    def extract_method_or_lemma(self, file_path, name):
-        with open(file_path, "r") as f:
-            content = f.read()
-        method_pattern = re.compile(rf"method {name}[^)]*\)(.*?\}})", re.DOTALL)
-        method_match = method_pattern.search(content)
-
-        lemma_pattern = re.compile(rf"lemma {name}[^)]*\)(.*?\}})", re.DOTALL)
-        lemma_match = lemma_pattern.search(content)
-
-        if method_match:
-            return method_match.group(0).strip()
-        elif lemma_match:
-            return lemma_match.group(0).strip()
-        else:
-            return None
-
     def generate_fix(self, program_to_fix, method_name, fix_prompt, model_parameters):
-        method = self.extract_method_or_lemma(program_to_fix, method_name)
+        with open(program_to_fix, "r") as f:
+            content = f.read()
+        method = extract_method_or_lemma(content, method_name)
         question = f"{fix_prompt} {method}"
 
         self.messages.append({"role": "user", "content": question})

@@ -4,6 +4,7 @@ import re
 import subprocess
 import yaml
 from llm_prompt import Llm_prompt
+from utils import extract_method_or_lemma, replace_method
 
 
 def parse_assertion_results(file_path):
@@ -146,6 +147,16 @@ class Method:
         self.error_message = None
         self.dafny_log_file = None
 
+    def compare(self, new_method):
+        if new_method.verification_result and not self.verification_result:
+            return "SUCCESS: Second method verifies, and the first one does not."
+
+        if self.verification_result and new_method.verification_result:
+            if new_method.verification_time < self.verification_time:
+                return "SUCCESS: Second method verifies faster than the first one."
+
+        return "FAILURE: Second method does not verify."
+
     def run_verification(self, results_directory):
         dafny_command = [
             "dafny",
@@ -172,6 +183,10 @@ class Method:
     def __str__(self):
         return f"Method: {self.method_name}\nVerification time: {self.verification_time} seconds\nVerification result: {self.verification_result}"
 
+    def get_file_content(self):
+        with open(self.file_path, "r") as file:
+            return file.read()
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -191,6 +206,7 @@ if __name__ == "__main__":
     )
 
     for method in methods:
+        print("+--------------------------------------+")
         method.run_verification(config["Results_dir"])
         print(method)
         response = llm_prompt.generate_fix(
@@ -199,4 +215,17 @@ if __name__ == "__main__":
             config["Prompt"]["Fix_prompt"],
             config["Model_parameters"],
         )
-    print(response["choices"][0]["message"]["content"])
+        fix_prompt = response["choices"][0]["message"]["content"]
+        # TODO extract each assertions separately and count the number of assertions
+        new_method = extract_method_or_lemma(fix_prompt, method.method_name)
+        content = method.get_file_content()
+        new_content = replace_method(content, method.method_name, new_method)
+        fix_filename = f'{config["Results_dir"]}/{method.method_name}_fix.dfy'
+        with open(fix_filename, "w") as file:
+            file.write(new_content)
+
+        new_method = Method(fix_filename, method.method_name)
+        new_method.run_verification(config["Results_dir"])
+        print(new_method)
+        comparison_result = method.compare(new_method)
+        print(comparison_result)
