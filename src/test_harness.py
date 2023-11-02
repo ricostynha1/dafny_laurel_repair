@@ -4,7 +4,11 @@ import re
 import subprocess
 import yaml
 from llm_prompt import Llm_prompt
-from utils import extract_method_or_lemma, replace_method
+from utils import (
+    extract_method_or_lemma,
+    replace_method,
+    extract_method_and_lemma_names,
+)
 
 
 def parse_assertion_results(file_path):
@@ -192,13 +196,47 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Run Dafny verification for specified methods."
     )
-    parser.add_argument("config_file", help="Path to the YAML config file")
+
+    subparsers = parser.add_subparsers(
+        dest="mode", help="Choose between llm or remove assertion"
+    )
+
+    llm_parser = subparsers.add_parser("llm", help="Use llm mode")
+    llm_parser.add_argument("config_file", help="Path to the project")
+
+    prune_assert_parser = subparsers.add_parser(
+        "prune-assert", help="Prune-assert mode"
+    )
+    prune_assert_parser.add_argument("project_path", help="Path to the project")
+
     return parser.parse_args()
 
 
-if __name__ == "__main__":
-    args = parse_arguments()
+def remove_assertions(project_path):
+    for root, dirs, files in os.walk(project_path):
+        for file in files:
+            file_path = os.path.join(root, file)
 
+            with open(file_path) as file:
+                content = file.read()
+
+            print(content)
+            print(extract_method_and_lemma_names(content))
+            exit()
+            # extract each lemma or method
+
+    # verify each method
+    # rank them by time
+    #
+    # remove assertions from the longest method
+    # reverify
+    #
+    # get the difference in time.
+    # sort the assertions by time difference
+    pass
+
+
+def generate_fix_llm(config_file):
     methods, config = parse_config(args.config_file)
 
     llm_prompt = Llm_prompt(
@@ -229,3 +267,12 @@ if __name__ == "__main__":
         print(new_method)
         comparison_result = method.compare(new_method)
         print(comparison_result)
+
+
+if __name__ == "__main__":
+    args = parse_arguments()
+
+    if args.mode == "prune-assert":
+        remove_assertions(args.project_path)
+    elif args.mode == "llm":
+        generate_fix_llm(args.config_file)

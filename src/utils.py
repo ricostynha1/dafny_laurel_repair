@@ -16,6 +16,13 @@ def extract_method_or_lemma(content, name):
         return None
 
 
+def extract_method_and_lemma_names(content):
+    method_names = re.findall(r"\bmethod\s+(\w+)", content)
+    lemma_names = re.findall(r"\blemma\s+(\w+)", content)
+
+    return method_names, lemma_names
+
+
 def replace_method(file_content, old_method_name, new_method_content):
     old_method_pattern = re.compile(
         rf"method {old_method_name}[^)]*\)(.*?\}})", re.DOTALL
