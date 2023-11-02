@@ -4,7 +4,6 @@ from utils import extract_method_or_lemma
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-
 class Llm_prompt:
     def __init__(self, system_prompt, context):
         messages = []
