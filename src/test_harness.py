@@ -3,12 +3,15 @@ import os
 import re
 import subprocess
 import yaml
+from datetime import timedelta, time
 from llm_prompt import Llm_prompt
 from utils import (
     extract_method_or_lemma,
     replace_method,
     extract_method_and_lemma_names,
+    adjust_microseconds,
 )
+from collections import OrderedDict
 
 
 def parse_assertion_results(file_path):
@@ -142,6 +145,12 @@ def parse_config(config_file):
             print(exc)
 
 
+def extract_assertions(code):
+    pattern = r"(\bassert\b\s+.+?;\n)"
+    matches = re.findall(pattern, code)
+    return matches
+
+
 class Method:
     def __init__(self, file_path, method_name):
         self.file_path = file_path
@@ -150,6 +159,17 @@ class Method:
         self.verification_result = None
         self.error_message = None
         self.dafny_log_file = None
+
+    def create_modified_method(self, new_method, directory):
+        new_content = replace_method(
+            self.get_file_content(), self.method_name, new_method
+        )
+        fix_filename = f"{directory}/{self.method_name}_fix.dfy"
+        with open(fix_filename, "w") as file:
+            file.write(new_content)
+
+        new_method = Method(fix_filename, self.method_name)
+        return new_method
 
     def compare(self, new_method):
         if new_method.verification_result and not self.verification_result:
@@ -182,7 +202,15 @@ class Method:
         self.verification_result = (
             self.verification_outcome[0]["overall_outcome"] == "Correct"
         )
-        self.verification_time = self.verification_outcome[0]["overall_time"]
+        time_obj = time.fromisoformat(
+            adjust_microseconds(self.verification_outcome[0]["overall_time"], 6)
+        )
+        self.verification_time = timedelta(
+            hours=time_obj.hour,
+            minutes=time_obj.minute,
+            seconds=time_obj.second,
+            microseconds=time_obj.microsecond,
+        ).total_seconds()
 
     def __str__(self):
         return f"Method: {self.method_name}\nVerification time: {self.verification_time} seconds\nVerification result: {self.verification_result}"
@@ -190,6 +218,9 @@ class Method:
     def get_file_content(self):
         with open(self.file_path, "r") as file:
             return file.read()
+
+    def get_method_content(self, file_content):
+        return extract_method_or_lemma(file_content, self.method_name)
 
 
 def parse_arguments():
@@ -212,7 +243,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def remove_assertions(project_path):
+def remove_assertions(project_path, results_path="./results"):
     for root, dirs, files in os.walk(project_path):
         for file in files:
             file_path = os.path.join(root, file)
@@ -220,19 +251,41 @@ def remove_assertions(project_path):
             with open(file_path) as file:
                 content = file.read()
 
-            print(content)
-            print(extract_method_and_lemma_names(content))
-            exit()
-            # extract each lemma or method
+            method_names = extract_method_and_lemma_names(content)
+            method_list = []
+            for method in method_names:
+                method = Method(file_path, method)
+                method_list.append(method)
+                method.run_verification(results_path)
+            sorted_methods = sorted(method_list, key=lambda x: x.verification_time)
 
-    # verify each method
-    # rank them by time
-    #
-    # remove assertions from the longest method
-    # reverify
-    #
-    # get the difference in time.
-    # sort the assertions by time difference
+            for method in sorted_methods:
+                # only in the method
+                file_content = method.get_file_content()
+                assertions = extract_assertions(method.get_method_content(file_content))
+                assertions_time = {}
+                for assertion in assertions:
+                    modified_method = method.get_method_content(file_content).replace(
+                        assertion, "", 1
+                    )
+                    new_method = method.create_modified_method(
+                        modified_method, results_path
+                    )
+                    new_method.run_verification(results_path)
+                    time_difference = float("nan")
+                    if new_method.verification_result:
+                        time_difference = (
+                            method.verification_time - new_method.verification_time
+                        )
+                    assertions_time[assertion] = time_difference
+                    print(new_method)
+                # Need to figure out a threshold where we decide that an assertion is usefull or not
+
+    sorted_time_assertions = OrderedDict(
+        sorted(assertions_time.items(), key=lambda x: x[1])
+    )
+    print(sorted_time_assertions)
+
     pass
 
 
@@ -255,6 +308,8 @@ def generate_fix_llm(config_file):
         )
         fix_prompt = response["choices"][0]["message"]["content"]
         # TODO extract each assertions separately and count the number of assertions
+        # TODO use the new function to replace the method
+        # method.create_modified_method(fix_prompt, config["Results_dir"])
         new_method = extract_method_or_lemma(fix_prompt, method.method_name)
         content = method.get_file_content()
         new_content = replace_method(content, method.method_name, new_method)

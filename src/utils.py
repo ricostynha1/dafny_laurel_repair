@@ -20,7 +20,7 @@ def extract_method_and_lemma_names(content):
     method_names = re.findall(r"\bmethod\s+(\w+)", content)
     lemma_names = re.findall(r"\blemma\s+(\w+)", content)
 
-    return method_names, lemma_names
+    return method_names + lemma_names
 
 
 def replace_method(file_content, old_method_name, new_method_content):
@@ -40,3 +40,14 @@ def replace_method(file_content, old_method_name, new_method_content):
     else:
         print(f"Method '{old_method_name}' not found in the file.")
     return modified_content
+
+
+def adjust_microseconds(time_str, desired_precision):
+    seconds, microseconds = time_str.split(".")
+
+    rounded_microseconds = str(round(float(f"0.{microseconds}"), desired_precision))[2:]
+    padded_microseconds = rounded_microseconds.ljust(desired_precision, "0")
+
+    adjusted_time_str = f"{seconds}.{padded_microseconds}"
+
+    return adjusted_time_str
