@@ -1,6 +1,6 @@
 import openai
 import os
-from utils import extract_method_or_lemma
+from utils import extract_dafny_functions
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
@@ -30,7 +30,7 @@ class Llm_prompt:
     def generate_fix(self, program_to_fix, method_name, fix_prompt, model_parameters):
         with open(program_to_fix, "r") as f:
             content = f.read()
-        method = extract_method_or_lemma(content, method_name)
+        method = extract_dafny_functions(content, method_name)
         question = f"{fix_prompt} {method}"
 
         self.messages.append({"role": "user", "content": question})

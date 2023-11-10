@@ -1,17 +1,18 @@
 import argparse
+import csv
 import os
 import re
 import subprocess
+import time
 import yaml
-from datetime import timedelta, time
+import datetime
 from llm_prompt import Llm_prompt
 from utils import (
-    extract_method_or_lemma,
+    extract_dafny_functions,
     replace_method,
     extract_method_and_lemma_names,
     adjust_microseconds,
 )
-from collections import OrderedDict
 
 
 def parse_assertion_results(file_path):
@@ -122,7 +123,16 @@ def get_valid_batches_by_time(result_outcome):
     return sorted_batches
 
 
-def parse_config(config_file):
+def parse_config_assert_pruning(config_file):
+    with open(config_file, "r") as stream:
+        try:
+            config_data = yaml.safe_load(stream)
+            return config_data
+        except yaml.YAMLError as exc:
+            print(exc)
+
+
+def parse_config_llm(config_file):
     with open(config_file, "r") as stream:
         try:
             config_data = yaml.safe_load(stream)
@@ -152,23 +162,26 @@ def extract_assertions(code):
 
 
 class Method:
-    def __init__(self, file_path, method_name):
+    def __init__(self, file_path, method_name, index=0):
         self.file_path = file_path
         self.method_name = method_name
         self.verification_time = None
         self.verification_result = None
         self.error_message = None
         self.dafny_log_file = None
+        self.index = index
 
-    def create_modified_method(self, new_method, directory):
+    # the directory needs to be where the previous file is
+    # otherwise the dependencies won't work
+    def create_modified_method(self, new_method, directory, index):
         new_content = replace_method(
             self.get_file_content(), self.method_name, new_method
         )
-        fix_filename = f"{directory}/{self.method_name}_fix.dfy"
+        fix_filename = f"{directory}/{self.method_name}_fix_{index}.dfy"
         with open(fix_filename, "w") as file:
             file.write(new_content)
 
-        new_method = Method(fix_filename, self.method_name)
+        new_method = Method(fix_filename, self.method_name, index=index)
         return new_method
 
     def compare(self, new_method):
@@ -181,7 +194,7 @@ class Method:
 
         return "FAILURE: Second method does not verify."
 
-    def run_verification(self, results_directory):
+    def run_verification(self, results_directory, additionnal_args=None):
         dafny_command = [
             "dafny",
             "verify",
@@ -191,21 +204,28 @@ class Method:
             f"text;LogFileName={results_directory}/{self.method_name}.txt",
             self.file_path,
         ]
+        dafny_command[-1:-1] = additionnal_args.split() if additionnal_args else []
+        # print(dafny_command)
 
         self.dafny_log_file = f"{results_directory}/{self.method_name}.txt"
 
         try:
-            subprocess.run(dafny_command, check=True, capture_output=True, text=True)
+            result = subprocess.run(
+                dafny_command, check=True, capture_output=True, text=True
+            )
+            print(result.stdout)
         except subprocess.CalledProcessError as e:
             self.error_message = e.stdout
+            print(e.stdout)
+            print(e.stderr)
         self.verification_outcome = parse_assertion_results(self.dafny_log_file)
         self.verification_result = (
             self.verification_outcome[0]["overall_outcome"] == "Correct"
         )
-        time_obj = time.fromisoformat(
+        time_obj = datetime.time.fromisoformat(
             adjust_microseconds(self.verification_outcome[0]["overall_time"], 6)
         )
-        self.verification_time = timedelta(
+        self.verification_time = datetime.timedelta(
             hours=time_obj.hour,
             minutes=time_obj.minute,
             seconds=time_obj.second,
@@ -220,7 +240,7 @@ class Method:
             return file.read()
 
     def get_method_content(self, file_content):
-        return extract_method_or_lemma(file_content, self.method_name)
+        return extract_dafny_functions(file_content, self.method_name)
 
 
 def parse_arguments():
@@ -233,64 +253,112 @@ def parse_arguments():
     )
 
     llm_parser = subparsers.add_parser("llm", help="Use llm mode")
-    llm_parser.add_argument("config_file", help="Path to the project")
+    llm_parser.add_argument("config_file", help="Config to run the llm gen")
 
     prune_assert_parser = subparsers.add_parser(
         "prune-assert", help="Prune-assert mode"
     )
-    prune_assert_parser.add_argument("project_path", help="Path to the project")
+    prune_assert_parser.add_argument("config_file", help="Config to run the llm gen")
 
     return parser.parse_args()
 
 
-def remove_assertions(project_path, results_path="./results"):
+def write_csv(result, csv_file_path):
+    header = [
+        "Index",
+        "File",
+        "Method",
+        "Assertion",
+        "Time difference",
+        "New method time",
+        "New method result",
+    ]
+    with open(csv_file_path, "w", newline="") as csv_file:
+        csv_writer = csv.writer(csv_file)
+        csv_writer.writerow(header)
+        csv_writer.writerows(result)
+
+
+def remove_assertions(config_file):
+    config = parse_config_assert_pruning(config_file)
+    project_path = config["Project_path"]
+    results_path = config["Results_dir"]
+    stats_file = config["Stats_file"]
+
+    total_files = sum(
+        1
+        for _, _, files in os.walk(project_path)
+        for file in files
+        if file.endswith(".dfy")
+    )
+    file_counter = 0
+    start_time = time.time()
+
+    method_index = 0
+    stats = []
     for root, dirs, files in os.walk(project_path):
         for file in files:
-            file_path = os.path.join(root, file)
+            if file.endswith(".dfy"):
+                file_counter += 1
 
-            with open(file_path) as file:
-                content = file.read()
+                file_path = os.path.join(root, file)
+                file_location = os.path.dirname(file_path)
 
-            method_names = extract_method_and_lemma_names(content)
-            method_list = []
-            for method in method_names:
-                method = Method(file_path, method)
-                method_list.append(method)
-                method.run_verification(results_path)
-            sorted_methods = sorted(method_list, key=lambda x: x.verification_time)
+                with open(file_path) as file:
+                    content = file.read()
 
-            for method in sorted_methods:
-                # only in the method
-                file_content = method.get_file_content()
-                assertions = extract_assertions(method.get_method_content(file_content))
-                assertions_time = {}
-                for assertion in assertions:
-                    modified_method = method.get_method_content(file_content).replace(
-                        assertion, "", 1
+                method_names = extract_method_and_lemma_names(content)
+                method_list = []
+                for method in method_names:
+                    method = Method(file_path, method)
+                    method_list.append(method)
+                    method.run_verification(
+                        results_path, additionnal_args=config["Dafny_args"]
                     )
-                    new_method = method.create_modified_method(
-                        modified_method, results_path
+                sorted_methods = sorted(method_list, key=lambda x: x.verification_time)
+
+                for method in sorted_methods:
+                    file_content = method.get_file_content()
+                    assertions = extract_assertions(
+                        method.get_method_content(file_content)
                     )
-                    new_method.run_verification(results_path)
-                    time_difference = float("nan")
-                    if new_method.verification_result:
-                        time_difference = (
-                            method.verification_time - new_method.verification_time
+                    for assertion in assertions:
+                        method_index += 1
+                        modified_method = method.get_method_content(
+                            file_content
+                        ).replace(assertion, "", 1)
+                        new_method = method.create_modified_method(
+                            modified_method, file_location, method_index
                         )
-                    assertions_time[assertion] = time_difference
-                    print(new_method)
-                # Need to figure out a threshold where we decide that an assertion is usefull or not
-
-    sorted_time_assertions = OrderedDict(
-        sorted(assertions_time.items(), key=lambda x: x[1])
-    )
-    print(sorted_time_assertions)
-
-    pass
+                        new_method.run_verification(
+                            results_path, additionnal_args=config["Dafny_args"]
+                        )
+                        time_difference = float("nan")
+                        if new_method.verification_result:
+                            time_difference = (
+                                method.verification_time - new_method.verification_time
+                            )
+                        assertions_stats = [
+                            method.index,
+                            method.file_path,
+                            method.method_name,
+                            assertion,
+                            time_difference,
+                            new_method.verification_time,
+                            new_method.verification_result,
+                        ]
+                        print(new_method)
+                        stats.append(assertions_stats)
+                    # TODO Need to figure out a threshold where we decide that an assertion is usefull or not
+                elapsed_time = time.time() - start_time
+                print(
+                    f"====Finished file {file_path} {file_counter}/{total_files} after {elapsed_time} seconds====="
+                )
+    write_csv(stats, stats_file)
 
 
 def generate_fix_llm(config_file):
-    methods, config = parse_config(args.config_file)
+    methods, config = parse_config_llm(args.config_file)
 
     llm_prompt = Llm_prompt(
         config["Prompt"]["System_prompt"], config["Prompt"]["Context"]
@@ -310,9 +378,10 @@ def generate_fix_llm(config_file):
         # TODO extract each assertions separately and count the number of assertions
         # TODO use the new function to replace the method
         # method.create_modified_method(fix_prompt, config["Results_dir"])
-        new_method = extract_method_or_lemma(fix_prompt, method.method_name)
+        new_method = extract_dafny_functions(fix_prompt, method.method_name)
         content = method.get_file_content()
         new_content = replace_method(content, method.method_name, new_method)
+        # TODO FIX "results_dir" might not work here since the file will miss its dependencies
         fix_filename = f'{config["Results_dir"]}/{method.method_name}_fix.dfy'
         with open(fix_filename, "w") as file:
             file.write(new_content)
@@ -328,6 +397,6 @@ if __name__ == "__main__":
     args = parse_arguments()
 
     if args.mode == "prune-assert":
-        remove_assertions(args.project_path)
+        remove_assertions(args.config_file)
     elif args.mode == "llm":
         generate_fix_llm(args.config_file)

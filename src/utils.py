@@ -1,19 +1,26 @@
 import re
 
 
-def extract_method_or_lemma(content, name):
-    method_pattern = re.compile(rf"method {name}[^)]*\)(.*?\}})", re.DOTALL)
-    method_match = method_pattern.search(content)
+def extract_dafny_functions(dafny_code, name):
+    inside_function = False
+    current_function = ""
+    brace_count = 0
 
-    lemma_pattern = re.compile(rf"lemma {name}[^)]*\)(.*?\}})", re.DOTALL)
-    lemma_match = lemma_pattern.search(content)
+    lines = dafny_code.split("\n")
 
-    if method_match:
-        return method_match.group(0).strip()
-    elif lemma_match:
-        return lemma_match.group(0).strip()
-    else:
-        return None
+    for line in lines:
+        if f"lemma {name}" in line or f"method {name}" in line:
+            inside_function = True
+            current_function += line + "\n"
+            brace_count += line.count("{") - line.count("}")
+        elif inside_function:
+            current_function += line + "\n"
+            brace_line_count = line.count("{") - line.count("}")
+            brace_count += brace_line_count
+
+            if brace_count == 0 and "}" in line and brace_line_count != 0:
+                inside_function = False
+                return current_function
 
 
 def extract_method_and_lemma_names(content):
@@ -24,22 +31,9 @@ def extract_method_and_lemma_names(content):
 
 
 def replace_method(file_content, old_method_name, new_method_content):
-    old_method_pattern = re.compile(
-        rf"method {old_method_name}[^)]*\)(.*?\}})", re.DOTALL
-    )
-    old_method_match = old_method_pattern.search(file_content)
-    lemma_pattern = re.compile(rf"lemma {old_method_name}[^)]*\)(.*?\}})", re.DOTALL)
-    lemma_match = lemma_pattern.search(file_content)
-
-    if old_method_match:
-        modified_content = old_method_pattern.sub(new_method_content, file_content)
-        print(f"Method '{old_method_name}' replaced successfully.")
-    elif lemma_match:
-        modified_content = lemma_pattern.sub(new_method_content, file_content)
-        print(f"Lemma'{old_method_name}' replaced successfully.")
-    else:
-        print(f"Method '{old_method_name}' not found in the file.")
-    return modified_content
+    function = extract_dafny_functions(file_content, old_method_name)
+    dafny_code = file_content.replace(function, new_method_content)
+    return dafny_code
 
 
 def adjust_microseconds(time_str, desired_precision):
