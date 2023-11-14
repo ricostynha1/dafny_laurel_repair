@@ -18,7 +18,15 @@ def extract_dafny_functions(dafny_code, name):
             brace_line_count = line.count("{") - line.count("}")
             brace_count += brace_line_count
 
-            if brace_count == 0 and "}" in line and brace_line_count != 0:
+            # hack to identify when a function finishes
+            # {} if it is an empty function
+            # otherwise expect } and with a brace count to 0 (since we are finishing the func)
+            # and not an even number of braces on the line (the odd is the one to finish the func)
+            if (
+                brace_count == 0
+                and "}" in line
+                and (brace_line_count != 0 or "{}" in line)
+            ):
                 inside_function = False
                 return current_function
 
