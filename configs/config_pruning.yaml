@@ -1,6 +1,5 @@
 Results_dir: ./results
-Project_path: /exp/test_projects/libraries/src
-# Project_path: /exp/test_projects/libraries/src/Collections/Sets
+#Project_path: /exp/test_projects/libraries/src
+Project_path: /exp/test_projects/libraries/src/Collections/Sets
 Dafny_args: "--use-basename-for-filename --cores:2 --verification-time-limit:300 --disable-nonlinear-arithmetic"
-Stats_file: ./results/stats_pruning_libraries.txt
-Stats_file: ./results/stats_pruning_libraries_2.txt
+Stats_file: ./results/stats_pruning_libraries_test.txt

@@ -7,6 +7,7 @@ import time
 import yaml
 import datetime
 from llm_prompt import Llm_prompt
+from logger_config import logger
 from utils import (
     extract_dafny_functions,
     replace_method,
@@ -129,7 +130,7 @@ def parse_config_assert_pruning(config_file):
             config_data = yaml.safe_load(stream)
             return config_data
         except yaml.YAMLError as exc:
-            print(exc)
+            logger.error(exc)
 
 
 def parse_config_llm(config_file):
@@ -152,7 +153,7 @@ def parse_config_llm(config_file):
 
             return methods_list, config_data
         except yaml.YAMLError as exc:
-            print(exc)
+            logger.error(exc)
 
 
 def extract_assertions(code):
@@ -205,19 +206,19 @@ class Method:
             self.file_path,
         ]
         dafny_command[-1:-1] = additionnal_args.split() if additionnal_args else []
-        # print(dafny_command)
+        logger.debug(dafny_command)
 
         self.dafny_log_file = f"{results_directory}/{self.method_name}.txt"
 
         try:
-            subprocess.run(dafny_command, check=True, capture_output=True, text=True)
-            # TODO replace by logging
-            # print(result.stdout)
+            result = subprocess.run(
+                dafny_command, check=True, capture_output=True, text=True
+            )
+            logger.debug(result.stdout)
         except subprocess.CalledProcessError as e:
             self.error_message = e.stdout
-            # TODO replace by logging
-            # print(e.stdout)
-            # print(e.stderr)
+            logger.error(e.stdout)
+            logger.error(e.stderr)
         self.verification_outcome = parse_assertion_results(self.dafny_log_file)
         if not self.verification_outcome:
             return False
@@ -230,8 +231,8 @@ class Method:
             )
             time_obj = datetime.time.fromisoformat(time_adjusted)
         except ValueError as e:
-            print(e)
-            print(time_adjusted)
+            logger.error(e)
+            logger.error(time_adjusted)
 
         self.verification_time = datetime.timedelta(
             hours=time_obj.hour,
@@ -313,7 +314,7 @@ def remove_assertions(config_file):
 
                 file_path = os.path.join(root, file)
                 file_location = os.path.dirname(file_path)
-                print("Starting file", file_counter, "/", total_files, ":", file_path)
+                logger.info(f"Starting file {file_counter}/{total_files}:{file_path}")
 
                 with open(file_path) as file:
                     content = file.read()
@@ -332,13 +333,15 @@ def remove_assertions(config_file):
                             method.verification_time = 0
                             continue
                     except Exception as e:
-                        print(e)
+                        logger.error(e)
                         continue
 
                 if success:
                     sorted_methods = sorted(
                         method_list, key=lambda x: x.verification_time
                     )
+                else:
+                    continue
 
                 for method in sorted_methods:
                     try:
@@ -374,16 +377,16 @@ def remove_assertions(config_file):
                                 new_method.verification_time,
                                 new_method.verification_result,
                             ]
-                            print(new_method)
+                            logger.info(new_method)
                             stats.append(assertions_stats)
                             csv_writer.writerow(assertions_stats)
                     except Exception as e:
-                        print(e)
+                        logger.error(e)
                         continue
 
                     # TODO Need to figure out a threshold where we decide that an assertion is usefull or not
                 elapsed_time = time.time() - start_time
-                print(
+                logger.info(
                     f"====Finished file {file_path} {file_counter}/{total_files} after {elapsed_time} seconds====="
                 )
 
@@ -396,9 +399,9 @@ def generate_fix_llm(config_file):
     )
 
     for method in methods:
-        print("+--------------------------------------+")
+        logger.info("+--------------------------------------+")
         method.run_verification(config["Results_dir"])
-        print(method)
+        logger.info(method)
         response = llm_prompt.generate_fix(
             method.file_path,
             method.method_name,
@@ -419,15 +422,17 @@ def generate_fix_llm(config_file):
 
         new_method = Method(fix_filename, method.method_name)
         new_method.run_verification(config["Results_dir"])
-        print(new_method)
+        logger.info(new_method)
         comparison_result = method.compare(new_method)
-        print(comparison_result)
+        logger.info(comparison_result)
 
 
 if __name__ == "__main__":
     args = parse_arguments()
 
     if args.mode == "prune-assert":
+        logger.info("==== Starting the assertion pruning ====")
         remove_assertions(args.config_file)
     elif args.mode == "llm":
+        logger.info("==== Starting the llm fix ====")
         generate_fix_llm(args.config_file)
