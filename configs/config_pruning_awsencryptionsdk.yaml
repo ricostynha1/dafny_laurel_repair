@@ -1,0 +1,5 @@
+# Does not work
+Results_dir: ./results
+Project_path: /exp/test_projects/aws-encryption-sdk-dafny/AwsEncryptionSDK/dafny/AwsEncryptionSdk
+Dafny_args: "--verification-time-limit 150 --cores:4 --relax-definite-assignment --quantifier-syntax:3 --unicode-char:false --function-syntax:3 "
+Stats_file: ./results/stats_pruning_awsencryptionsdk.txt

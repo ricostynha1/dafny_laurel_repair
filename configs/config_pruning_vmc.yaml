@@ -1,0 +1,4 @@
+Results_dir: ./results
+Project_path: /exp/test_projects/Dafny-VMC
+Dafny_args: "--resource-limit 20000"
+Stats_file: ./results/stats_pruning_dafnyVMC.txt

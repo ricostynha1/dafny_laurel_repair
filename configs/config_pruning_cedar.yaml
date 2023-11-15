@@ -1,0 +1,4 @@
+Results_dir: ./results
+Project_path: /exp/test_projects/cedar-spec/cedar-dafny
+Dafny_args: "--verification-time-limit:300"
+Stats_file: ./results/stats_pruning_cedar.txt
