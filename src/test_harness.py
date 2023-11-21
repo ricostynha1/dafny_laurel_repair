@@ -2,12 +2,13 @@ import argparse
 import csv
 import os
 import re
+import shutil
 import subprocess
 import time
 import yaml
 import datetime
 from llm_prompt import Llm_prompt
-from logger_config import logger
+from logger_config import configure_logger
 from utils import (
     extract_dafny_functions,
     replace_method,
@@ -163,14 +164,57 @@ def extract_assertions(code):
 
 
 class Method:
-    def __init__(self, file_path, method_name, index=0):
-        self.file_path = file_path
+    def __init__(self, file_path, method_name, index=0, new_file_path=None):
+        if new_file_path:
+            print(f"New file path: {new_file_path}")
+            print(f"Old file path: {file_path}")
+            shutil.copy(file_path, new_file_path)
+            self.file_path = new_file_path
+        else:
+            self.file_path = file_path
+        self.moved_path = None
         self.method_name = method_name
         self.verification_time = None
         self.verification_result = None
         self.error_message = None
         self.dafny_log_file = None
         self.index = index
+
+    def move_original(self, directory):
+        file_name, file_extension = os.path.splitext(os.path.basename(self.file_path))
+        new_file_path = os.path.join(
+            directory, f"{file_name}_original.{file_extension}"
+        )
+        shutil.move(self.file_path, new_file_path)
+        self.moved_path = new_file_path
+        logger.debug(
+            f"Copied method: {self.method_name} from {self.file_path} to {new_file_path}"
+        )
+
+    def move_back(self):
+        file_name, file_extension = os.path.splitext(os.path.basename(self.file_path))
+        if self.moved_path and os.path.exists(self.moved_path):
+            shutil.move(self.moved_path, self.file_path)
+            logger.debug(
+                f"Move method: {self.method_name} from {self.moved_path} to {self.file_path}"
+            )
+        else:
+            logger.debug(f"File {self.moved_path} does not exist")
+
+    def move_to_results_directory(self, result_directory):
+        if not os.path.exists(result_directory):
+            os.makedirs(result_directory)
+
+        file_name, file_extension = os.path.splitext(os.path.basename(self.file_path))
+        new_file_path = os.path.join(result_directory, f"{file_name}.{file_extension}")
+        if os.path.exists(self.file_path):
+            shutil.move(self.file_path, new_file_path)
+            logger.debug(
+                f"Moved method: {self.method_name} from {self.file_path} to {new_file_path}"
+            )
+            return new_file_path
+        else:
+            logger.debug(f"File {self.file_path} does not exist")
 
     # the directory needs to be where the previous file is
     # otherwise the dependencies won't work
@@ -187,22 +231,30 @@ class Method:
 
     def compare(self, new_method):
         if new_method.verification_result and not self.verification_result:
-            return "SUCCESS: Second method verifies, and the first one does not."
+            return True, "SUCCESS: Second method verifies, and the first one does not."
 
         if self.verification_result and new_method.verification_result:
             if new_method.verification_time < self.verification_time:
-                return "SUCCESS: Second method verifies faster than the first one."
+                return (
+                    True,
+                    "SUCCESS: Second method verifies faster than the first one.",
+                )
+            else:
+                return (
+                    False,
+                    "FAILURE: Second method verifies slower than the first one.",
+                )
 
-        return "FAILURE: Second method does not verify."
+        return False, "FAILURE: Second method does not verify."
 
     def run_verification(self, results_directory, additionnal_args=None):
         dafny_command = [
             "dafny",
             "verify",
             "--boogie-filter",
-            f"*{self.method_name}*",
+            f'"*{self.method_name}*"',
             "--log-format",
-            f"text;LogFileName={results_directory}/{self.method_name}.txt",
+            f'"text;LogFileName={results_directory}/{self.method_name}.txt"',
             self.file_path,
         ]
         dafny_command[-1:-1] = additionnal_args.split() if additionnal_args else []
@@ -212,13 +264,20 @@ class Method:
 
         try:
             result = subprocess.run(
-                dafny_command, check=True, capture_output=True, text=True
+                " ".join(dafny_command),
+                check=True,
+                capture_output=True,
+                text=True,
+                shell=True,
+                executable="/usr/bin/zsh",
             )
             logger.debug(result.stdout)
         except subprocess.CalledProcessError as e:
             self.error_message = e.stdout
-            logger.error(e.stdout)
-            logger.error(e.stderr)
+            if e.stderr:
+                logger.error(e.stderr)
+            if e.stdout:
+                logger.error(e.stdout)
         self.verification_outcome = parse_assertion_results(self.dafny_log_file)
         if not self.verification_outcome:
             return False
@@ -257,6 +316,11 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Run Dafny verification for specified methods."
     )
+    parser.add_argument(
+        "--disable_date", action="store_true", help="remove date from logs"
+    )
+
+    # parser.add_argument("-log_date", "-ld", help="remove date from logs")
 
     subparsers = parser.add_subparsers(
         dest="mode", help="Choose between llm or remove assertion"
@@ -264,6 +328,7 @@ def parse_arguments():
 
     llm_parser = subparsers.add_parser("llm", help="Use llm mode")
     llm_parser.add_argument("config_file", help="Config to run the llm gen")
+    llm_parser.add_argument("--pruning_results", "-p", help="CSV pruning results file")
 
     prune_assert_parser = subparsers.add_parser(
         "prune-assert", help="Prune-assert mode"
@@ -280,8 +345,10 @@ def write_csv_header(csv_file_path):
         "Method",
         "Assertion",
         "Time difference",
+        "File new method",
         "New method time",
         "New method result",
+        "Old method time",
     ]
     csv_file = open(csv_file_path, "a", newline="")
     csv_writer = csv.writer(csv_file)
@@ -357,10 +424,14 @@ def remove_assertions(config_file):
                             new_method = method.create_modified_method(
                                 modified_method, file_location, method_index
                             )
+                            # need to move the original to prevent conflict
+                            method.move_original(results_path)
                             success = new_method.run_verification(
                                 results_path, additionnal_args=config["Dafny_args"]
                             )
+                            method.move_back()
                             if not success:
+                                new_method.move_to_results_directory(results_path)
                                 continue
                             time_difference = float("nan")
                             if new_method.verification_result:
@@ -374,14 +445,19 @@ def remove_assertions(config_file):
                                 method.method_name,
                                 assertion,
                                 time_difference,
+                                new_method.file_path,
                                 new_method.verification_time,
                                 new_method.verification_result,
+                                method.verification_time,
                             ]
                             logger.info(new_method)
                             stats.append(assertions_stats)
                             csv_writer.writerow(assertions_stats)
+                            new_method.move_to_results_directory(results_path)
                     except Exception as e:
                         logger.error(e)
+                        new_method.move_to_results_directory(results_path)
+                        method.move_back()
                         continue
 
                     # TODO Need to figure out a threshold where we decide that an assertion is usefull or not
@@ -391,48 +467,162 @@ def remove_assertions(config_file):
                 )
 
 
-def generate_fix_llm(config_file):
-    methods, config = parse_config_llm(args.config_file)
-
-    llm_prompt = Llm_prompt(
-        config["Prompt"]["System_prompt"], config["Prompt"]["Context"]
-    )
-
-    for method in methods:
-        logger.info("+--------------------------------------+")
-        method.run_verification(config["Results_dir"])
-        logger.info(method)
-        response = llm_prompt.generate_fix(
-            method.file_path,
-            method.method_name,
-            config["Prompt"]["Fix_prompt"],
-            config["Model_parameters"],
+def generate_fix_llm(config_file, pruning_results=None):
+    methods = []
+    new_file_location = None
+    if pruning_results:
+        method_processed = 0
+        success_count = 0
+        _, config = parse_config_llm(config_file)
+        llm_prompt = Llm_prompt(
+            config["Prompt"]["System_prompt"], config["Prompt"]["Context"]
         )
-        fix_prompt = response["choices"][0]["message"]["content"]
-        # TODO extract each assertions separately and count the number of assertions
-        # TODO use the new function to replace the method
-        # method.create_modified_method(fix_prompt, config["Results_dir"])
-        new_method = extract_dafny_functions(fix_prompt, method.method_name)
-        content = method.get_file_content()
-        new_content = replace_method(content, method.method_name, new_method)
-        # TODO FIX "results_dir" might not work here since the file will miss its dependencies
-        fix_filename = f'{config["Results_dir"]}/{method.method_name}_fix.dfy'
-        with open(fix_filename, "w") as file:
-            file.write(new_content)
+        for row in pruning_results:
+            # copy the original
+            if "DivModAddDenominator_fix_2" in row["File new method"]:
+                continue
+            original_filepath = row["File"]
+            new_file_location = shutil.move(
+                original_filepath,
+                f"{config['Results_dir']}/{os.path.basename(original_filepath)}",
+            )
+            # move the file new method to the original
+            # but just extract the location
+            original_path = os.path.dirname(original_filepath)
+            file_to_fix = os.path.basename(row["File new method"])
+            actual_filepath_to_fix = os.path.join(config["Results_dir"], file_to_fix)
+            filepath_to_fix = os.path.join(original_path, file_to_fix)
+            # TODO copy should outside of method!
+            method = Method(
+                actual_filepath_to_fix, row["Method"], new_file_path=filepath_to_fix
+            )
+            logger.info("+--------------------------------------+")
+            method.run_verification(
+                config["Results_dir"], additionnal_args=config["Dafny_args"]
+            )
+            logger.debug(method)
+            try:
+                response = llm_prompt.generate_fix(
+                    method.file_path,
+                    method.method_name,
+                    config["Prompt"]["Fix_prompt"],
+                    config["Model_parameters"],
+                )
+                fix_prompt = response["choices"][0]["message"]["content"]
+                # TODO extract each assertions separately and count the number of assertions
+                new_method_content = extract_dafny_functions(
+                    fix_prompt, method.method_name
+                )
+                logger.info(new_method_content)
+                new_method_content = "\n".join(
+                    line.lstrip("+") for line in new_method_content.splitlines()
+                )
+                method_location = os.path.dirname(method.file_path)
+                new_method = method.create_modified_method(
+                    new_method_content, method_location, 0
+                )
+                # remove previous method
+                method.move_to_results_directory(config["Results_dir"])
+                new_method.run_verification(
+                    config["Results_dir"], additionnal_args=config["Dafny_args"]
+                )
+                logger.info(new_method)
+                comparison_result, comparison_details = method.compare(new_method)
+                new_method.move_to_results_directory(config["Results_dir"])
+                logger.info(comparison_details)
+                if comparison_result:
+                    success_count += 1
+            except Exception as e:
+                print(e)
+            # copy the original method from the result dir
+            shutil.copy(new_file_location, original_filepath)
 
-        new_method = Method(fix_filename, method.method_name)
-        new_method.run_verification(config["Results_dir"])
-        logger.info(new_method)
-        comparison_result = method.compare(new_method)
-        logger.info(comparison_result)
+            method_processed += 1
+            logger.info(f"Succes rate: {success_count}/{method_processed}")
+    else:
+        methods, config = parse_config_llm(config_file)
+
+        llm_prompt = Llm_prompt(
+            config["Prompt"]["System_prompt"], config["Prompt"]["Context"]
+        )
+
+        method_processed = 0
+        success_count = 0
+        for method in methods:
+            logger.info("+--------------------------------------+")
+            if "Dafny_args" in config:
+                method.run_verification(
+                    config["Results_dir"], additionnal_args=config["Dafny_args"]
+                )
+            else:
+                method.run_verification(config["Results_dir"])
+            logger.debug(method)
+            response = llm_prompt.generate_fix(
+                method.file_path,
+                method.method_name,
+                config["Prompt"]["Fix_prompt"],
+                config["Model_parameters"],
+            )
+            fix_prompt = response["choices"][0]["message"]["content"]
+            # TODO extract each assertions separately and count the number of assertions
+            new_method_content = extract_dafny_functions(fix_prompt, method.method_name)
+            logger.debug(new_method_content)
+            new_method_content = "\n".join(
+                line.lstrip("+") for line in new_method_content.splitlines()
+            )
+            method_location = os.path.dirname(method.file_path)
+            # method_location = method.file_path
+            # tmp_path_original = method.move_to_results_directory(config["Results_dir"])
+            tmp_path_original = shutil.copy(
+                method.file_path,
+                f"{config['Results_dir']}/{os.path.basename(method.file_path)}",
+            )
+            new_method = method.create_modified_method(
+                new_method_content, method_location, 0
+            )
+            # remove previous method
+            if "Dafny_args" in config:
+                new_method.run_verification(
+                    config["Results_dir"], additionnal_args=config["Dafny_args"]
+                )
+            else:
+                new_method.run_verification(config["Results_dir"])
+            logger.debug(new_method)
+            comparison_result, comparison_details = method.compare(new_method)
+            new_method.move_to_results_directory(config["Results_dir"])
+            # copy the original method from the result dir
+            shutil.copy(tmp_path_original, method.file_path)
+
+            logger.info(comparison_details)
+            method_processed += 1
+            if comparison_result:
+                success_count += 1
+            logger.info(f"Succes rate: {success_count}/{method_processed}")
+
+
+def read_pruning_result(csv_file_path):
+    csv_data = []
+    with open(csv_file_path, newline="") as csvfile:
+        csv_reader = csv.DictReader(csvfile)
+        for row in csv_reader:
+            csv_data.append(row)
+        return csv_data
 
 
 if __name__ == "__main__":
     args = parse_arguments()
+    if args.disable_date:
+        logger = configure_logger(include_date=False)
+    else:
+        logger = configure_logger()
 
     if args.mode == "prune-assert":
         logger.info("==== Starting the assertion pruning ====")
         remove_assertions(args.config_file)
     elif args.mode == "llm":
         logger.info("==== Starting the llm fix ====")
+        if args.pruning_results:
+            methods = []
+            pruning_results = read_pruning_result(args.pruning_results)
+            generate_fix_llm(args.config_file, pruning_results=pruning_results)
         generate_fix_llm(args.config_file)

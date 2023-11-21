@@ -4,7 +4,7 @@ import logging
 LOG_FILE = "logs/prunning.log"
 
 
-def configure_logger():
+def configure_logger(include_date=True):
     logger = logging.getLogger()
     logger.setLevel(
         logging.DEBUG
@@ -16,7 +16,12 @@ def configure_logger():
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
 
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    formatter = logging.Formatter(
+        "%(asctime)s - %(levelname)s - %(message)s"
+        if include_date
+        else "%(levelname)s - %(message)s"
+    )
+
     file_handler.setFormatter(formatter)
     console_handler.setFormatter(formatter)
 
@@ -24,6 +29,3 @@ def configure_logger():
     logger.addHandler(console_handler)
 
     return logger
-
-
-logger = configure_logger()

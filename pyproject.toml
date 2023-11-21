@@ -45,3 +45,7 @@ exclude = '''
 | .pre-commit-config.yaml
 )/
 '''
+
+[tool.poetry.scripts]
+pythonpath = "tests"
+test = 'tests:test_main.__main__'

@@ -20,6 +20,5 @@ Model_parameters:
   Max_tokens: 1024
   Model: gpt-4
 Methods:
-  - File_path: ../test_projects/verification_optimization/unital.dfy
+  - File_path: ./tests/ressources/unital.dfy
     Method_name: UnitIsUnique
-Dafny_args: "--library /exp/test_projects/Dafny-VMC/src/**/*.dfy --resource-limit 20000"
