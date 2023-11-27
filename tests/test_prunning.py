@@ -5,16 +5,17 @@ import subprocess
 class TestsPruning(unittest.TestCase):
     def test_tool_output(self):
         # Define your tool command with specific arguments
-        command = ""
+        command = "poetry run python src/test_harness.py --disable_date prune-assert configs/config_pruning_test.yaml"
 
         # Run the command and capture the output
         try:
             result = subprocess.run(
                 command,
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                check=True,
+                capture_output=True,
                 text=True,
+                shell=True,
+                executable="/usr/bin/zsh",
             )
         except subprocess.CalledProcessError as e:
             self.error_message = e.stdout
@@ -23,9 +24,8 @@ class TestsPruning(unittest.TestCase):
             if e.stdout:
                 print(e.stdout)
 
-        # Check if the return code is 0 (success)
-        self.assertEqual(result.returncode, 0)
-
-        # Check if the output matches your expectations
-        expected_output = ""
-        self.assertEqual(result.stderr.strip(), expected_output)
+        expected_output_file = "./tests/expected_output/test_pruning_tool.txt"
+        with open(expected_output_file, "r") as f:
+            expected_output = f.read()
+            # Remove the \n in the end of the file
+            self.assertEqual(result.stderr.strip(), expected_output[:-1])

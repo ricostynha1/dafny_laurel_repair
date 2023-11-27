@@ -362,11 +362,15 @@ def remove_assertions(config_file):
     results_path = config["Results_dir"]
     stats_file = config["Stats_file"]
 
-    total_files = sum(
-        1
-        for _, _, files in os.walk(project_path)
-        for file in files
-        if file.endswith(".dfy") and "_fix" not in file
+    total_files = (
+        sum(
+            1
+            for _, _, files in os.walk(project_path)
+            for file in files
+            if file.endswith(".dfy") and "_fix" not in file
+        )
+        if os.path.isdir(project_path)
+        else 1
     )
     file_counter = 0
     start_time = time.time()
@@ -374,97 +378,102 @@ def remove_assertions(config_file):
     method_index = 0
     stats = []
     csv_writer = write_csv_header(stats_file)
-    for root, dirs, files in os.walk(project_path):
-        for file in files:
-            if file.endswith(".dfy") and "_fix" not in file:
-                file_counter += 1
+    file_list = []
+    if os.path.isdir(project_path):
+        for root, dirs, files in os.walk(project_path):
+            for file in files:
+                if file.endswith(".dfy") and "_fix" not in file:
+                    file_list.append(os.path.join(root, file))
+    else:
+        file_list.append(project_path)
 
-                file_path = os.path.join(root, file)
-                file_location = os.path.dirname(file_path)
-                logger.info(f"Starting file {file_counter}/{total_files}:{file_path}")
+    for file_path in file_list:
+        file_counter += 1
 
-                with open(file_path) as file:
-                    content = file.read()
+        file_location = os.path.dirname(file_path)
+        logger.info(f"Starting file {file_counter}/{total_files}:{file_path}")
 
-                method_names = extract_method_and_lemma_names(content)
-                method_list = []
-                success = True
-                for method in method_names:
-                    try:
-                        method = Method(file_path, method)
-                        method_list.append(method)
-                        success = method.run_verification(
-                            results_path, additionnal_args=config["Dafny_args"]
-                        )
-                        if not success:
-                            method.verification_time = 0
-                            continue
-                    except Exception as e:
-                        logger.error(e)
-                        continue
+        with open(file_path) as file:
+            content = file.read()
 
-                if success:
-                    sorted_methods = sorted(
-                        method_list, key=lambda x: x.verification_time
-                    )
-                else:
-                    continue
-
-                for method in sorted_methods:
-                    try:
-                        file_content = method.get_file_content()
-                        assertions = extract_assertions(
-                            method.get_method_content(file_content)
-                        )
-                        for assertion in assertions:
-                            method_index += 1
-                            modified_method = method.get_method_content(
-                                file_content
-                            ).replace(assertion, "", 1)
-                            new_method = method.create_modified_method(
-                                modified_method, file_location, method_index
-                            )
-                            # need to move the original to prevent conflict
-                            method.move_original(results_path)
-                            success = new_method.run_verification(
-                                results_path, additionnal_args=config["Dafny_args"]
-                            )
-                            method.move_back()
-                            if not success:
-                                new_method.move_to_results_directory(results_path)
-                                continue
-                            time_difference = float("nan")
-                            if new_method.verification_result:
-                                time_difference = (
-                                    method.verification_time
-                                    - new_method.verification_time
-                                )
-                            assertions_stats = [
-                                new_method.index,
-                                method.file_path,
-                                method.method_name,
-                                assertion,
-                                time_difference,
-                                new_method.file_path,
-                                new_method.verification_time,
-                                new_method.verification_result,
-                                method.verification_time,
-                            ]
-                            logger.info(new_method)
-                            stats.append(assertions_stats)
-                            csv_writer.writerow(assertions_stats)
-                            new_method.move_to_results_directory(results_path)
-                    except Exception as e:
-                        logger.error(e)
-                        new_method.move_to_results_directory(results_path)
-                        method.move_back()
-                        continue
-
-                    # TODO Need to figure out a threshold where we decide that an assertion is usefull or not
-                elapsed_time = time.time() - start_time
-                logger.info(
-                    f"====Finished file {file_path} {file_counter}/{total_files} after {elapsed_time} seconds====="
+        method_names = extract_method_and_lemma_names(content)
+        method_list = []
+        success = True
+        for method in method_names:
+            try:
+                method = Method(file_path, method)
+                method_list.append(method)
+                success = method.run_verification(
+                    results_path, additionnal_args=config["Dafny_args"]
                 )
+                if not success:
+                    method.verification_time = 0
+                    continue
+            except Exception as e:
+                logger.error(e)
+                continue
+
+        if success:
+            sorted_methods = sorted(method_list, key=lambda x: x.verification_time)
+        else:
+            continue
+
+        for method in sorted_methods:
+            try:
+                file_content = method.get_file_content()
+                assertions = extract_assertions(method.get_method_content(file_content))
+                for assertion in assertions:
+                    method_index += 1
+                    logger.info(
+                        f"Starting assertion {method_index}/{len(assertions)} for {method.method_name}"
+                    )
+                    modified_method = method.get_method_content(file_content).replace(
+                        assertion, "", 1
+                    )
+                    new_method = method.create_modified_method(
+                        modified_method, file_location, method_index
+                    )
+                    # need to move the original to prevent conflict
+                    method.move_original(results_path)
+                    success = new_method.run_verification(
+                        results_path, additionnal_args=config["Dafny_args"]
+                    )
+                    method.move_back()
+                    if not success:
+                        new_method.move_to_results_directory(results_path)
+                        continue
+                    time_difference = float("nan")
+                    if new_method.verification_result:
+                        time_difference = (
+                            method.verification_time - new_method.verification_time
+                        )
+                    assertions_stats = [
+                        new_method.index,
+                        method.file_path,
+                        method.method_name,
+                        assertion,
+                        time_difference,
+                        new_method.file_path,
+                        new_method.verification_time,
+                        new_method.verification_result,
+                        method.verification_time,
+                    ]
+                    logger.debug(new_method)
+                    stats.append(assertions_stats)
+                    csv_writer.writerow(assertions_stats)
+                    new_method.move_to_results_directory(results_path)
+            except Exception as e:
+                logger.error(e)
+                new_method.move_to_results_directory(results_path)
+                method.move_back()
+                continue
+
+            # TODO Need to figure out a threshold where we decide that an assertion is usefull or not
+        elapsed_time = time.time() - start_time
+        logger.info(
+            f"==== Finished file {file_path} {file_counter}/{total_files} ====="
+        )
+        logger.debug(f"Elapsed time: {elapsed_time}")
 
 
 def generate_fix_llm(config_file, pruning_results=None):
