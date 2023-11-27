@@ -166,8 +166,6 @@ def extract_assertions(code):
 class Method:
     def __init__(self, file_path, method_name, index=0, new_file_path=None):
         if new_file_path:
-            print(f"New file path: {new_file_path}")
-            print(f"Old file path: {file_path}")
             shutil.copy(file_path, new_file_path)
             self.file_path = new_file_path
         else:
@@ -506,9 +504,12 @@ def generate_fix_llm(config_file, pruning_results=None):
                 actual_filepath_to_fix, row["Method"], new_file_path=filepath_to_fix
             )
             logger.info("+--------------------------------------+")
-            method.run_verification(
-                config["Results_dir"], additionnal_args=config["Dafny_args"]
-            )
+            if "Dafny_args" in config:
+                method.run_verification(
+                    config["Results_dir"], additionnal_args=config["Dafny_args"]
+                )
+            else:
+                method.run_verification(config["Results_dir"])
             logger.debug(method)
             try:
                 response = llm_prompt.generate_fix(
@@ -532,10 +533,13 @@ def generate_fix_llm(config_file, pruning_results=None):
                 )
                 # remove previous method
                 method.move_to_results_directory(config["Results_dir"])
-                new_method.run_verification(
-                    config["Results_dir"], additionnal_args=config["Dafny_args"]
-                )
-                logger.info(new_method)
+                if "Dafny_args" in config:
+                    new_method.run_verification(
+                        config["Results_dir"], additionnal_args=config["Dafny_args"]
+                    )
+                else:
+                    new_method.run_verification(config["Results_dir"])
+                logger.debug(new_method)
                 comparison_result, comparison_details = method.compare(new_method)
                 new_method.move_to_results_directory(config["Results_dir"])
                 logger.info(comparison_details)
@@ -545,6 +549,7 @@ def generate_fix_llm(config_file, pruning_results=None):
                 print(e)
             # copy the original method from the result dir
             shutil.copy(new_file_location, original_filepath)
+            shutil.copy(actual_filepath_to_fix, filepath_to_fix)
 
             method_processed += 1
             logger.info(f"Succes rate: {success_count}/{method_processed}")
@@ -634,4 +639,5 @@ if __name__ == "__main__":
             methods = []
             pruning_results = read_pruning_result(args.pruning_results)
             generate_fix_llm(args.config_file, pruning_results=pruning_results)
-        generate_fix_llm(args.config_file)
+        else:
+            generate_fix_llm(args.config_file)

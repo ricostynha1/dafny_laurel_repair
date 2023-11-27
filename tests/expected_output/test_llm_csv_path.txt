@@ -1,0 +1,27 @@
+INFO - ==== Starting the llm fix ====
+INFO - +--------------------------------------+
+ERROR - tests/ressources/unital.dfy(21,0): Error: a postcondition could not be proved on this return path
+   |
+21 | {
+   | ^
+
+tests/ressources/unital.dfy(20,14): Related location: this is the postcondition that could not be proved
+   |
+20 |       ensures unit1 == unit2
+   |               ^^^^^^^^^^^^^^
+
+
+Dafny program verifier finished with 0 verified, 1 error
+
+INFO - lemma UnitIsUnique<T(!new)>(bop: (T, T) -> T, unit1: T, unit2: T)
+  requires IsUnital(bop, unit1)
+  requires IsUnital(bop, unit2)
+  ensures unit1 == unit2
+{
+  assert bop(unit1, unit2) == unit2; // by IsUnital(bop, unit1)
+  assert bop(unit1, unit2) == unit1; // by IsUnital(bop, unit2)
+  // Therefore, unit1 == unit2
+}
+
+INFO - SUCCESS: Second method verifies, and the first one does not.
+INFO - Succes rate: 1/1
