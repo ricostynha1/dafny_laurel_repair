@@ -228,10 +228,16 @@ class Method:
         return new_method
 
     def compare(self, new_method):
-        if new_method.verification_result and not self.verification_result:
+        if (
+            new_method.verification_result == "Correct"
+            and not self.verification_result == "Correct"
+        ):
             return True, "SUCCESS: Second method verifies, and the first one does not."
 
-        if self.verification_result and new_method.verification_result:
+        if (
+            self.verification_result == "Correct"
+            and new_method.verification_result == "Correct"
+        ):
             if new_method.verification_time < self.verification_time:
                 return (
                     True,
@@ -280,7 +286,8 @@ class Method:
         if not self.verification_outcome:
             return False
         self.verification_result = (
-            self.verification_outcome[0]["overall_outcome"] == "Correct"
+            # self.verification_outcome[0]["overall_outcome"] == "Correct"
+            self.verification_outcome[0]["overall_outcome"]
         )
         try:
             time_adjusted = adjust_microseconds(
@@ -441,7 +448,7 @@ def remove_assertions(config_file):
                         new_method.move_to_results_directory(results_path)
                         continue
                     time_difference = float("nan")
-                    if new_method.verification_result:
+                    if new_method.verification_result == "Correct":
                         time_difference = (
                             method.verification_time - new_method.verification_time
                         )
