@@ -1,16 +1,14 @@
 import argparse
 import os
 import shutil
-import time
 from llm_prompt import Llm_prompt
 from logger_config import configure_logger
 from dafny_utils import (
-    extract_assertions,
-    extract_method_and_lemma_names,
     extract_dafny_functions,
 )
-from utils import read_pruning_result, write_csv_header
-from config_parsing import parse_config_assert_pruning, parse_config_llm
+from utils import read_pruning_result
+from config_parsing import parse_config_llm
+from pruning import remove_assertions
 
 from Method import Method
 
@@ -41,126 +39,6 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def remove_assertions(config_file):
-    config = parse_config_assert_pruning(config_file)
-    project_path = config["Project_path"]
-    results_path = config["Results_dir"]
-    stats_file = config["Stats_file"]
-
-    total_files = (
-        sum(
-            1
-            for _, _, files in os.walk(project_path)
-            for file in files
-            if file.endswith(".dfy") and "_fix" not in file
-        )
-        if os.path.isdir(project_path)
-        else 1
-    )
-    file_counter = 0
-    start_time = time.time()
-
-    method_index = 0
-    stats = []
-    csv_writer = write_csv_header(stats_file)
-    file_list = []
-    if os.path.isdir(project_path):
-        for root, dirs, files in os.walk(project_path):
-            for file in files:
-                if file.endswith(".dfy") and "_fix" not in file:
-                    file_list.append(os.path.join(root, file))
-    else:
-        file_list.append(project_path)
-
-    for file_path in file_list:
-        file_counter += 1
-
-        file_location = os.path.dirname(file_path)
-        logger.info(f"Starting file {file_counter}/{total_files}:{file_path}")
-
-        with open(file_path) as file:
-            content = file.read()
-
-        method_names = extract_method_and_lemma_names(content)
-        method_list = []
-        success = True
-        for method in method_names:
-            try:
-                method = Method(file_path, method)
-                method_list.append(method)
-                success = method.run_verification(
-                    results_path, additionnal_args=config["Dafny_args"]
-                )
-                if not success:
-                    method.verification_time = 0
-                    continue
-            except Exception as e:
-                logger.error(e)
-                continue
-
-        if success:
-            sorted_methods = sorted(method_list, key=lambda x: x.verification_time)
-        else:
-            continue
-
-        for method in sorted_methods:
-            try:
-                file_content = method.get_file_content()
-                assertions = extract_assertions(method.get_method_content(file_content))
-                for assertion in assertions:
-                    method_index += 1
-                    logger.info(
-                        f"Starting assertion {method_index}/{len(assertions)} for {method.method_name}"
-                    )
-                    modified_method = method.get_method_content(file_content).replace(
-                        assertion, "", 1
-                    )
-                    new_method = method.create_modified_method(
-                        modified_method, file_location, method_index
-                    )
-                    # need to move the original to prevent conflict
-                    method.move_original(results_path)
-                    success = new_method.run_verification(
-                        results_path, additionnal_args=config["Dafny_args"]
-                    )
-                    method.move_back()
-                    if not success:
-                        new_method.move_to_results_directory(results_path)
-                        continue
-                    time_difference = float("nan")
-                    if new_method.verification_result == "Correct":
-                        time_difference = (
-                            method.verification_time - new_method.verification_time
-                        )
-                    assertions_stats = [
-                        new_method.index,
-                        method.file_path,
-                        method.method_name,
-                        assertion,
-                        time_difference,
-                        new_method.file_path,
-                        new_method.verification_time,
-                        new_method.verification_result,
-                        method.verification_time,
-                    ]
-                    logger.debug(new_method)
-                    stats.append(assertions_stats)
-                    csv_writer.writerow(assertions_stats)
-                    new_method.move_to_results_directory(results_path)
-            except Exception as e:
-                logger.error(e)
-                new_method.move_to_results_directory(results_path)
-                method.move_back()
-                continue
-
-            # TODO Need to figure out a threshold where we decide that an assertion is usefull or not
-        elapsed_time = time.time() - start_time
-        logger.info(
-            f"==== Finished file {file_path} {file_counter}/{total_files} ====="
-        )
-        logger.debug(f"Elapsed time: {elapsed_time}")
-
-
 def generate_fix_llm(config_file, pruning_results=None):
     methods = []
     new_file_location = None
@@ -186,10 +64,8 @@ def generate_fix_llm(config_file, pruning_results=None):
             file_to_fix = os.path.basename(row["File new method"])
             actual_filepath_to_fix = os.path.join(config["Results_dir"], file_to_fix)
             filepath_to_fix = os.path.join(original_path, file_to_fix)
-            # TODO copy should outside of method!
-            method = Method(
-                actual_filepath_to_fix, row["Method"], new_file_path=filepath_to_fix
-            )
+            shutil.copy(actual_filepath_to_fix, filepath_to_fix)
+            method = Method(filepath_to_fix, row["Method"])
             logger.info("+--------------------------------------+")
             if "Dafny_args" in config:
                 method.run_verification(

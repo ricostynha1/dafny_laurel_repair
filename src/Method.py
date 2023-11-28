@@ -10,12 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 class Method:
-    def __init__(self, file_path, method_name, index=0, new_file_path=None):
-        if new_file_path:
-            shutil.copy(file_path, new_file_path)
-            self.file_path = new_file_path
-        else:
-            self.file_path = file_path
+    def __init__(self, file_path, method_name, index=0):
+        self.file_path = file_path
         self.moved_path = None
         self.method_name = method_name
         self.verification_time = None
