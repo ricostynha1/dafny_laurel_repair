@@ -1,47 +1,4 @@
-import re
-
-
-def extract_dafny_functions(dafny_code, name):
-    inside_function = False
-    current_function = ""
-    brace_count = 0
-
-    lines = dafny_code.split("\n")
-
-    for line in lines:
-        if f"lemma {name}" in line or f"method {name}" in line:
-            inside_function = True
-            current_function += line + "\n"
-            brace_count += line.count("{") - line.count("}")
-        elif inside_function:
-            current_function += line + "\n"
-            brace_line_count = line.count("{") - line.count("}")
-            brace_count += brace_line_count
-
-            # hack to identify when a function finishes
-            # {} if it is an empty function
-            # otherwise expect } and with a brace count to 0 (since we are finishing the func)
-            # and not an even number of braces on the line (the odd is the one to finish the func)
-            if (
-                brace_count == 0
-                and "}" in line
-                and (brace_line_count != 0 or "{}" in line)
-            ):
-                inside_function = False
-                return current_function
-
-
-def extract_method_and_lemma_names(content):
-    method_names = re.findall(r"\bmethod\s+(\w+)", content)
-    lemma_names = re.findall(r"\blemma\s+(\w+)", content)
-
-    return method_names + lemma_names
-
-
-def replace_method(file_content, old_method_name, new_method_content):
-    function = extract_dafny_functions(file_content, old_method_name)
-    dafny_code = file_content.replace(function, new_method_content)
-    return dafny_code
+import csv
 
 
 def adjust_microseconds(time_str, desired_precision):
@@ -53,3 +10,30 @@ def adjust_microseconds(time_str, desired_precision):
     adjusted_time_str = f"{seconds}.{padded_microseconds}"
 
     return adjusted_time_str
+
+
+def read_pruning_result(csv_file_path):
+    csv_data = []
+    with open(csv_file_path, newline="") as csvfile:
+        csv_reader = csv.DictReader(csvfile)
+        for row in csv_reader:
+            csv_data.append(row)
+        return csv_data
+
+
+def write_csv_header(csv_file_path):
+    header = [
+        "Index",
+        "File",
+        "Method",
+        "Assertion",
+        "Time difference",
+        "File new method",
+        "New method time",
+        "New method result",
+        "Old method time",
+    ]
+    csv_file = open(csv_file_path, "a", newline="")
+    csv_writer = csv.writer(csv_file)
+    csv_writer.writerow(header)
+    return csv_writer

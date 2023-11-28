@@ -1,6 +1,6 @@
 import openai
 import os
-from utils import extract_dafny_functions
+from dafny_utils import extract_dafny_functions
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 

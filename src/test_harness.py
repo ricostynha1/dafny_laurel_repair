@@ -1,320 +1,18 @@
 import argparse
-import csv
 import os
-import re
 import shutil
-import subprocess
 import time
-import yaml
-import datetime
 from llm_prompt import Llm_prompt
 from logger_config import configure_logger
-from utils import (
-    extract_dafny_functions,
-    replace_method,
+from dafny_utils import (
+    extract_assertions,
     extract_method_and_lemma_names,
-    adjust_microseconds,
+    extract_dafny_functions,
 )
+from utils import read_pruning_result, write_csv_header
+from config_parsing import parse_config_assert_pruning, parse_config_llm
 
-
-def parse_assertion_results(file_path):
-    with open(file_path, "r") as f:
-        data = f.read()
-    assertion_batches = re.split(r"\n(?=\s*Results for \w+)", data)[1:]
-
-    result = []
-    for batch in assertion_batches:
-        if not batch:
-            continue
-        function_match = re.search(r"Results for (\w+) \((\w+)\)", batch)
-        if function_match:
-            function_name = function_match.group(1)
-            verification_type = function_match.group(2)
-        else:
-            function_name = None
-            verification_type = None
-
-        overall_outcome_match = re.search(r"Overall outcome: (\w+)", batch)
-        overall_time_match = re.search(r"Overall time: (.+)", batch)
-        overall_resource_count_match = re.search(
-            r"Overall resource count: (\d+)", batch
-        )
-        max_batch_time_match = re.search(r"Maximum assertion batch time: (.+)", batch)
-        max_batch_resource_count_match = re.search(
-            r"Maximum assertion batch resource count: (\d+)", batch
-        )
-        batch_info_matches = re.finditer(
-            r"Assertion batch (\d+):([\s\S]*?)(?=\n\s*Assertion batch \d+|$)", batch
-        )
-
-        batches_info = []
-        for batch_info_match in batch_info_matches:
-            batch_number = int(batch_info_match.group(1))
-            batch_info = batch_info_match.group(2).strip()
-
-            outcome_match = re.search(r"Outcome: (\w+)", batch_info)
-            duration_match = re.search(r"Duration: (.+)", batch_info)
-            resource_count_match = re.search(r"Resource count: (\d+)", batch_info)
-
-            batch_data = {
-                "batch_number": batch_number,
-                "overall_outcome": outcome_match.group(1) if outcome_match else None,
-                "duration": duration_match.group(1) if duration_match else None,
-                "resource_count": int(resource_count_match.group(1))
-                if resource_count_match
-                else None,
-            }
-
-            assertions_info = []
-            assertions_matches = re.finditer(
-                r"(\w+\.\w+)\((\d+),(\d+)\): (.+)", batch_info
-            )
-            for match in assertions_matches:
-                file_name, line, character, assertion_result = match.groups()
-
-                assertions_info.append(
-                    {
-                        "filename": file_name,
-                        "line": int(line),
-                        "character": int(character),
-                        "assertion_result": assertion_result,
-                    }
-                )
-
-            batch_data["assertions"] = assertions_info
-            batches_info.append(batch_data)
-
-        function_data = {
-            "function_name": function_name,
-            "verification_type": verification_type,
-            "overall_outcome": overall_outcome_match.group(1)
-            if overall_outcome_match
-            else None,
-            "overall_time": overall_time_match.group(1) if overall_time_match else None,
-            "overall_resource_count": int(overall_resource_count_match.group(1))
-            if overall_resource_count_match
-            else None,
-            "max_batch_time": max_batch_time_match.group(1)
-            if max_batch_time_match
-            else None,
-            "max_batch_resource_count": int(max_batch_resource_count_match.group(1))
-            if max_batch_resource_count_match
-            else None,
-            "batches": batches_info,
-        }
-
-        result.append(function_data)
-
-    return result
-
-
-def get_invalid_batches(result_outcome):
-    invalid_batches = [
-        batch for batch in result_outcome if batch["overall_outcome"] == "Invalid"
-    ]
-    return invalid_batches
-
-
-def get_valid_batches_by_time(result_outcome):
-    valid_batches = [
-        batch for batch in result_outcome if batch["overall_outcome"] == "Valid"
-    ]
-    sorted_batches = sorted(
-        valid_batches, key=lambda x: x["max_batch_time"], reverse=True
-    )
-    return sorted_batches
-
-
-def parse_config_assert_pruning(config_file):
-    with open(config_file, "r") as stream:
-        try:
-            config_data = yaml.safe_load(stream)
-            return config_data
-        except yaml.YAMLError as exc:
-            logger.error(exc)
-
-
-def parse_config_llm(config_file):
-    with open(config_file, "r") as stream:
-        try:
-            config_data = yaml.safe_load(stream)
-            results_dir = config_data.get("Results_dir")
-            if not os.path.exists(results_dir):
-                os.makedirs(results_dir)
-            methods_data = config_data.get("Methods", [])
-
-            methods_list = []
-            for method_data in methods_data:
-                file_path = method_data.get("File_path")
-                method_name = method_data.get("Method_name")
-
-                if file_path and method_name:
-                    method = Method(file_path, method_name)
-                    methods_list.append(method)
-
-            return methods_list, config_data
-        except yaml.YAMLError as exc:
-            logger.error(exc)
-
-
-def extract_assertions(code):
-    pattern = r"(\bassert\b\s+.+?;\n)"
-    matches = re.findall(pattern, code)
-    return matches
-
-
-class Method:
-    def __init__(self, file_path, method_name, index=0, new_file_path=None):
-        if new_file_path:
-            shutil.copy(file_path, new_file_path)
-            self.file_path = new_file_path
-        else:
-            self.file_path = file_path
-        self.moved_path = None
-        self.method_name = method_name
-        self.verification_time = None
-        self.verification_result = None
-        self.error_message = None
-        self.dafny_log_file = None
-        self.index = index
-
-    def move_original(self, directory):
-        file_name, file_extension = os.path.splitext(os.path.basename(self.file_path))
-        new_file_path = os.path.join(
-            directory, f"{file_name}_original.{file_extension}"
-        )
-        shutil.move(self.file_path, new_file_path)
-        self.moved_path = new_file_path
-        logger.debug(
-            f"Copied method: {self.method_name} from {self.file_path} to {new_file_path}"
-        )
-
-    def move_back(self):
-        file_name, file_extension = os.path.splitext(os.path.basename(self.file_path))
-        if self.moved_path and os.path.exists(self.moved_path):
-            shutil.move(self.moved_path, self.file_path)
-            logger.debug(
-                f"Move method: {self.method_name} from {self.moved_path} to {self.file_path}"
-            )
-        else:
-            logger.debug(f"File {self.moved_path} does not exist")
-
-    def move_to_results_directory(self, result_directory):
-        if not os.path.exists(result_directory):
-            os.makedirs(result_directory)
-
-        file_name, file_extension = os.path.splitext(os.path.basename(self.file_path))
-        new_file_path = os.path.join(result_directory, f"{file_name}.{file_extension}")
-        if os.path.exists(self.file_path):
-            shutil.move(self.file_path, new_file_path)
-            logger.debug(
-                f"Moved method: {self.method_name} from {self.file_path} to {new_file_path}"
-            )
-            return new_file_path
-        else:
-            logger.debug(f"File {self.file_path} does not exist")
-
-    # the directory needs to be where the previous file is
-    # otherwise the dependencies won't work
-    def create_modified_method(self, new_method, directory, index):
-        new_content = replace_method(
-            self.get_file_content(), self.method_name, new_method
-        )
-        fix_filename = f"{directory}/{self.method_name}_fix_{index}.dfy"
-        with open(fix_filename, "w") as file:
-            file.write(new_content)
-
-        new_method = Method(fix_filename, self.method_name, index=index)
-        return new_method
-
-    def compare(self, new_method):
-        if (
-            new_method.verification_result == "Correct"
-            and not self.verification_result == "Correct"
-        ):
-            return True, "SUCCESS: Second method verifies, and the first one does not."
-
-        if (
-            self.verification_result == "Correct"
-            and new_method.verification_result == "Correct"
-        ):
-            if new_method.verification_time < self.verification_time:
-                return (
-                    True,
-                    "SUCCESS: Second method verifies faster than the first one.",
-                )
-            else:
-                return (
-                    False,
-                    "FAILURE: Second method verifies slower than the first one.",
-                )
-
-        return False, "FAILURE: Second method does not verify."
-
-    def run_verification(self, results_directory, additionnal_args=None):
-        dafny_command = [
-            "dafny",
-            "verify",
-            "--boogie-filter",
-            f'"*{self.method_name}*"',
-            "--log-format",
-            f'"text;LogFileName={results_directory}/{self.method_name}.txt"',
-            self.file_path,
-        ]
-        dafny_command[-1:-1] = additionnal_args.split() if additionnal_args else []
-        logger.debug(dafny_command)
-
-        self.dafny_log_file = f"{results_directory}/{self.method_name}.txt"
-
-        try:
-            result = subprocess.run(
-                " ".join(dafny_command),
-                check=True,
-                capture_output=True,
-                text=True,
-                shell=True,
-                executable="/usr/bin/zsh",
-            )
-            logger.debug(result.stdout)
-        except subprocess.CalledProcessError as e:
-            self.error_message = e.stdout
-            if e.stderr:
-                logger.error(e.stderr)
-            if e.stdout:
-                logger.error(e.stdout)
-        self.verification_outcome = parse_assertion_results(self.dafny_log_file)
-        if not self.verification_outcome:
-            return False
-        self.verification_result = (
-            # self.verification_outcome[0]["overall_outcome"] == "Correct"
-            self.verification_outcome[0]["overall_outcome"]
-        )
-        try:
-            time_adjusted = adjust_microseconds(
-                self.verification_outcome[0]["overall_time"], 6
-            )
-            time_obj = datetime.time.fromisoformat(time_adjusted)
-        except ValueError as e:
-            logger.error(e)
-            logger.error(time_adjusted)
-
-        self.verification_time = datetime.timedelta(
-            hours=time_obj.hour,
-            minutes=time_obj.minute,
-            seconds=time_obj.second,
-            microseconds=time_obj.microsecond,
-        ).total_seconds()
-        return True
-
-    def __str__(self):
-        return f"Method: {self.method_name} in {self.file_path}\nVerification time: {self.verification_time} seconds\nVerification result: {self.verification_result}"
-
-    def get_file_content(self):
-        with open(self.file_path, "r") as file:
-            return file.read()
-
-    def get_method_content(self, file_content):
-        return extract_dafny_functions(file_content, self.method_name)
+from Method import Method
 
 
 def parse_arguments():
@@ -341,24 +39,6 @@ def parse_arguments():
     prune_assert_parser.add_argument("config_file", help="Config to run the llm gen")
 
     return parser.parse_args()
-
-
-def write_csv_header(csv_file_path):
-    header = [
-        "Index",
-        "File",
-        "Method",
-        "Assertion",
-        "Time difference",
-        "File new method",
-        "New method time",
-        "New method result",
-        "Old method time",
-    ]
-    csv_file = open(csv_file_path, "a", newline="")
-    csv_writer = csv.writer(csv_file)
-    csv_writer.writerow(header)
-    return csv_writer
 
 
 def remove_assertions(config_file):
@@ -530,7 +210,7 @@ def generate_fix_llm(config_file, pruning_results=None):
                 new_method_content = extract_dafny_functions(
                     fix_prompt, method.method_name
                 )
-                logger.info(new_method_content)
+                logger.debug(new_method_content)
                 new_method_content = "\n".join(
                     line.lstrip("+") for line in new_method_content.splitlines()
                 )
@@ -619,15 +299,6 @@ def generate_fix_llm(config_file, pruning_results=None):
             if comparison_result:
                 success_count += 1
             logger.info(f"Succes rate: {success_count}/{method_processed}")
-
-
-def read_pruning_result(csv_file_path):
-    csv_data = []
-    with open(csv_file_path, newline="") as csvfile:
-        csv_reader = csv.DictReader(csvfile)
-        for row in csv_reader:
-            csv_data.append(row)
-        return csv_data
 
 
 if __name__ == "__main__":
