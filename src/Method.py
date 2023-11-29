@@ -46,7 +46,7 @@ class Method:
             os.makedirs(result_directory)
 
         file_name, file_extension = os.path.splitext(os.path.basename(self.file_path))
-        new_file_path = os.path.join(result_directory, f"{file_name}.{file_extension}")
+        new_file_path = os.path.join(result_directory, f"{file_name}{file_extension}")
         if os.path.exists(self.file_path):
             shutil.move(self.file_path, new_file_path)
             logger.debug(
@@ -65,6 +65,7 @@ class Method:
         fix_filename = f"{directory}/{self.method_name}_fix_{index}.dfy"
         with open(fix_filename, "w") as file:
             file.write(new_content)
+        logger.debug(f"Created file: {fix_filename}")
 
         new_method = Method(fix_filename, self.method_name, index=index)
         return new_method

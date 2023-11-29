@@ -26,6 +26,7 @@ def remove_assertions(config_file):
     total_files = count_dfy_files(project_path)
     file_counter = 0
     start_time = time.time()
+    assertion_index = [0]
 
     stats = []
     csv_writer = write_csv_header(stats_file)
@@ -37,7 +38,13 @@ def remove_assertions(config_file):
 
         try:
             process_file(
-                file_path, file_location, results_path, config, csv_writer, stats
+                file_path,
+                file_location,
+                results_path,
+                config,
+                csv_writer,
+                stats,
+                assertion_index,
             )
         except Exception as e:
             traceback_str = traceback.format_exc()
@@ -50,7 +57,9 @@ def remove_assertions(config_file):
         logger.debug(f"Elapsed time: {elapsed_time}")
 
 
-def process_file(file_path, file_location, results_path, config, csv_writer, stats):
+def process_file(
+    file_path, file_location, results_path, config, csv_writer, stats, assertion_index
+):
     try:
         with open(file_path) as file:
             content = file.read()
@@ -60,7 +69,13 @@ def process_file(file_path, file_location, results_path, config, csv_writer, sta
             sorted_methods = sorted(method_list, key=lambda x: x.verification_time)
             for method in sorted_methods:
                 process_method(
-                    method, file_location, results_path, config, csv_writer, stats
+                    method,
+                    file_location,
+                    results_path,
+                    config,
+                    csv_writer,
+                    stats,
+                    assertion_index,
                 )
 
     except Exception as e:
@@ -93,12 +108,15 @@ def process_methods(file_path, content, results_path, config):
     return method_list, success
 
 
-def process_method(method, file_location, results_path, config, csv_writer, stats):
+def process_method(
+    method, file_location, results_path, config, csv_writer, stats, assertion_index
+):
     try:
         file_content = method.get_file_content()
         assertions = extract_assertions(method.get_method_content(file_content))
 
         for assertion in assertions:
+            assertion_index[0] += 1
             logger.info(
                 f"Starting assertion {assertions.index(assertion) + 1}/{len(assertions)} for {method.method_name}"
             )
@@ -111,6 +129,7 @@ def process_method(method, file_location, results_path, config, csv_writer, stat
                 csv_writer,
                 stats,
                 file_content,
+                assertion_index,
             )
 
     except Exception as e:
@@ -127,8 +146,9 @@ def process_assertion(
     csv_writer,
     stats,
     file_content,
+    assertion_index,
 ):
-    method_index = method.index
+    method_index = assertion_index[0]
 
     try:
         modified_method = method.get_method_content(file_content).replace(

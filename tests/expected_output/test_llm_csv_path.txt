@@ -14,4 +14,4 @@ tests/ressources/unital.dfy(20,14): Related location: this is the postcondition 
 Dafny program verifier finished with 0 verified, 1 error
 
 INFO - SUCCESS: Second method verifies, and the first one does not.
-INFO - Succes rate: 1/1
+INFO - Success rate: 1/1
