@@ -100,9 +100,9 @@ class Method:
 
     def run_verification(self, results_directory, additionnal_args=None):
         self.dafny_log_file = f"{results_directory}/{self.method_name}_{self.index}.txt"
-        if self.type == "fix":
+        if self.type:
             self.dafny_log_file = (
-                f"{results_directory}/{self.method_name}_fix_{self.index}.txt"
+                f"{results_directory}/{self.method_name}_{self.type}_{self.index}.txt"
             )
         dafny_command = [
             "dafny",
