@@ -1,0 +1,102 @@
+system: You are a Dafny formal method expert. To fix proofs that are brittle or unstable you can add assertions inspired from the code or from the ensure annotations.
+user: Can you make this proof more stable:
+ lemma LemmaFlattenLengthLeMul<T>(s: seq<seq<T>>, j: int)
+  requires forall i {{:trigger s[i]}} | 0 <= i < |s| :: |s[i]| <= j
+  ensures |FlattenReverse(s)| <= |s| * j
+  {{
+    if |s| == 0 {{
+    }} else {{
+      LemmaFlattenLengthLeMul(s[..|s|-1], j);
+    }}
+  }}
+  # https://github.com/dafny-lang/libraries/pull/56/commits/4586789e1af32732224d7b7c31ccb55035ffac04
+assistant: Absolutely, you can add an assertion inspired by the postcondition such as:
+ lemma LemmaFlattenLengthLeMul<T>(s: seq<seq<T>>, j: int)
+  requires forall i {{:trigger s[i]}} | 0 <= i < |s| :: |s[i]| <= j
+  ensures |FlattenReverse(s)| <= |s| * j
+  {{
+    if |s| == 0 {{
+    }} else {{
+      LemmaFlattenLengthLeMul(s[..|s|-1], j);
++     assert |FlattenReverse(s[..|s|-1])| <= (|s|-1) * j;
+    }}
+  }}
+  # https://github.com/dafny-lang/libraries/pull/56/commits/4586789e1af32732224d7b7c31ccb55035ffac04
+user: Can you make this proof more stable:
+ type byte = BoundedInts.uint8
+/**
+  * Returns the byte serialization of the given code unit sequence.
+  */
+function Serialize(s: Utf8EncodingForm.CodeUnitSeq): (b: seq<byte>)
+{
+  Seq.Map(c => c as byte, s)
+}
+/**
+  * Returns the code unit sequence that serializes to the given byte sequence.
+  */
+function Deserialize(b: seq<byte>): (s: Utf8EncodingForm.CodeUnitSeq)
+{
+  Seq.Map(b => b as Utf8EncodingForm.CodeUnit, b)
+}
+/**
+  * Serializing a code unit sequence and then deserializing the result, yields the original code unit sequence.
+  */
+lemma LemmaSerializeDeserialize(s: Utf8EncodingForm.CodeUnitSeq)
+  ensures Deserialize(Serialize(s)) == s
+{
+}
+/**
+  * Deserializing a byte sequence and then serializing the result, yields the original byte sequence.
+  */
+lemma LemmaDeserializeSerialize(b: seq<byte>)
+  ensures Serialize(Deserialize(b)) == b
+{
+}
+# https://github.com/dafny-lang/libraries/pull/109/files
+assistant: Absolutely, you can add assertions in a calc statement made by decomposing the operation using the other lemmas: type byte = BoundedInts.uint8
+/**
+  * Returns the byte serialization of the given code unit sequence.
+  */
+function Serialize(s: Utf8EncodingForm.CodeUnitSeq): (b: seq<byte>)
+{
+  Seq.Map(c => c as byte, s)
+}
+/**
+  * Returns the code unit sequence that serializes to the given byte sequence.
+  */
+function Deserialize(b: seq<byte>): (s: Utf8EncodingForm.CodeUnitSeq)
+{
+  Seq.Map(b => b as Utf8EncodingForm.CodeUnit, b)
+}
+/**
+  * Serializing a code unit sequence and then deserializing the result, yields the original code unit sequence.
+  */
+lemma LemmaSerializeDeserialize(s: Utf8EncodingForm.CodeUnitSeq)
+  ensures Deserialize(Serialize(s)) == s
+{
+}
+/**
+  * Deserializing a byte sequence and then serializing the result, yields the original byte sequence.
+  */
+lemma LemmaDeserializeSerialize(b: seq<byte>)
+  ensures Serialize(Deserialize(b)) == b
+{
++ calc {
++     Serialize(Deserialize(b));
++   == // Definitions of Serialize, Deserialize
++     Seq.Map(c => c as byte, Seq.Map(b => b as Utf8EncodingForm.CodeUnit, b));
++   == // Compositionality of Map
++     Seq.Map(b => (b as Utf8EncodingForm.CodeUnit) as byte, b);
++   == // Simplify map
++     Seq.Map(b => b, b);
++   == // Identity function
++    b;
++   }
+}
+# https://github.com/dafny-lang/libraries/pull/109/files
+user: Can you make this proof more stable? lemma UnitIsUnique<T(!new)>(bop: (T, T) -> T, unit1: T, unit2: T)
+  requires IsUnital(bop, unit1)
+    requires IsUnital(bop, unit2)
+      ensures unit1 == unit2
+{
+}

@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class Method:
-    def __init__(self, file_path, method_name, index=0):
+    def __init__(self, file_path, method_name, index=0, type=""):
         self.file_path = file_path
         self.moved_path = None
         self.method_name = method_name
@@ -19,6 +19,9 @@ class Method:
         self.error_message = None
         self.dafny_log_file = None
         self.index = index
+        self.type = ""
+        if type:
+            self.type = type
 
     def move_original(self, directory):
         file_name, file_extension = os.path.splitext(os.path.basename(self.file_path))
@@ -52,13 +55,14 @@ class Method:
             logger.debug(
                 f"Moved method: {self.method_name} from {self.file_path} to {new_file_path}"
             )
+            self.file_path = new_file_path
             return new_file_path
         else:
             logger.debug(f"File {self.file_path} does not exist")
 
     # the directory needs to be where the previous file is
     # otherwise the dependencies won't work
-    def create_modified_method(self, new_method, directory, index):
+    def create_modified_method(self, new_method, directory, index, type=""):
         new_content = replace_method(
             self.get_file_content(), self.method_name, new_method
         )
@@ -67,7 +71,7 @@ class Method:
             file.write(new_content)
         logger.debug(f"Created file: {fix_filename}")
 
-        new_method = Method(fix_filename, self.method_name, index=index)
+        new_method = Method(fix_filename, self.method_name, index=index, type=type)
         return new_method
 
     def compare(self, new_method):
@@ -95,19 +99,22 @@ class Method:
         return False, "FAILURE: Second method does not verify."
 
     def run_verification(self, results_directory, additionnal_args=None):
+        self.dafny_log_file = f"{results_directory}/{self.method_name}_{self.index}.txt"
+        if self.type == "fix":
+            self.dafny_log_file = (
+                f"{results_directory}/{self.method_name}_fix_{self.index}.txt"
+            )
         dafny_command = [
             "dafny",
             "verify",
             "--boogie-filter",
             f'"*{self.method_name}*"',
             "--log-format",
-            f'"text;LogFileName={results_directory}/{self.method_name}.txt"',
+            f'"text;LogFileName={self.dafny_log_file}"',
             self.file_path,
         ]
         dafny_command[-1:-1] = additionnal_args.split() if additionnal_args else []
         logger.debug(dafny_command)
-
-        self.dafny_log_file = f"{results_directory}/{self.method_name}.txt"
 
         try:
             result = subprocess.run(

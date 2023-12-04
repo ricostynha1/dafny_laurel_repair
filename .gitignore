@@ -163,6 +163,7 @@ poetry.txt
 
 *.lock
 results/
+results_llm/
 
 .python-version
 .vscode/

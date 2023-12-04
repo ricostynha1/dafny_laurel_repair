@@ -22,3 +22,4 @@ Model_parameters:
 Methods:
   - File_path: ./tests/ressources/unital.dfy
     Method_name: UnitIsUnique
+Results_file: ./results/fixes_llm_test.csv

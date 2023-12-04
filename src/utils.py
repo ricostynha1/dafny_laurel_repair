@@ -24,15 +24,26 @@ def read_pruning_result(csv_file_path):
 def write_csv_header(csv_file_path):
     header = [
         "Index",
-        "File",
-        "Method",
+        "Original Method File",
+        "Original Method",
+        "Original Method Time",
+        "Original Method Result",
+        "Original Result File",
         "Assertion",
-        "Time difference",
-        "File new method",
-        "New method time",
-        "New method result",
-        "Old method time",
+        "Time Difference",
+        "New Method File",
+        "New Method",
+        "New Method Time",
+        "New Method Result",
+        "New Result File",
     ]
+    csv_file = open(csv_file_path, "a", newline="")
+    csv_writer = csv.writer(csv_file)
+    csv_writer.writerow(header)
+    return csv_writer
+
+
+def write_csv_header_arg(csv_file_path, header):
     csv_file = open(csv_file_path, "a", newline="")
     csv_writer = csv.writer(csv_file)
     csv_writer.writerow(header)

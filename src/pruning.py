@@ -157,7 +157,7 @@ def process_assertion(
         new_method = method.create_modified_method(
             modified_method, file_location, method_index
         )
-        print(
+        logger.info(
             f"Creating modified method for {method.method_name} in {new_method.file_path}"
         )
 
@@ -193,16 +193,21 @@ def process_verification(
             new_method.index,
             method.file_path,
             method.method_name,
+            method.verification_time,
+            method.verification_result,
+            method.dafny_log_file,
             assertion,
             time_difference,
             new_method.file_path,
+            new_method.method_name,
             new_method.verification_time,
             new_method.verification_result,
-            method.verification_time,
+            new_method.dafny_log_file,
         ]
 
         logger.debug(new_method)
         stats.append(assertions_stats)
+        logger.debug(f"Writing stats: {assertions_stats}")
         csv_writer.writerow(assertions_stats)
         new_method.move_to_results_directory(results_path)
 

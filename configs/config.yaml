@@ -1,4 +1,4 @@
-Results_dir: ./results
+Results_dir: ./results_llm
 Prompt:
   Context:
   - File_to_fix: ./prompts/4586789e1af32732224d7b7c31ccb55035ffac04.dfy
@@ -17,9 +17,10 @@ Prompt:
   Fix_prompt: "Can you make this proof more stable?"
 Model_parameters:
   Temperature: 0
-  Max_tokens: 1024
+  Max_tokens: 2048
   Model: gpt-4
 Methods:
   - File_path: ../test_projects/verification_optimization/unital.dfy
     Method_name: UnitIsUnique
 Dafny_args: "--library /exp/test_projects/Dafny-VMC/src/**/*.dfy --resource-limit 20000"
+Results_file: ./results_llm/stats_llm_DafnyVMC.csv

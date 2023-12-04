@@ -27,13 +27,20 @@ class Llm_prompt:
             messages.append({"role": "assistant", "content": assistant_content})
         self.messages = messages
 
-    def generate_fix(self, program_to_fix, method_name, fix_prompt, model_parameters):
+    def add_question(self, program_to_fix, method_name, fix_prompt):
         with open(program_to_fix, "r") as f:
             content = f.read()
         method = extract_dafny_functions(content, method_name)
         question = f"{fix_prompt} {method}"
 
         self.messages.append({"role": "user", "content": question})
+
+    def save_prompt(self, path):
+        with open(path, "w") as f:
+            for message in self.messages:
+                f.write(f"{message['role']}: {message['content']}\n")
+
+    def generate_fix(self, model_parameters):
         response = openai.ChatCompletion.create(
             model=model_parameters["Model"],
             temperature=model_parameters["Temperature"],
