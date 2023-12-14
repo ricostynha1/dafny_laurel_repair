@@ -14,11 +14,13 @@ Prompt:
   System_prompt: "You are a Dafny formal method expert.
   To fix proofs that are brittle or unstable you can add assertions
   inspired from the code or from the ensure annotations."
-  Fix_prompt: "Can you make this proof more stable?"
+  # Fix_prompt: "Can you make this proof more stable?"
+  Fix_prompt: "Can you fix this proof by adding assertions to the method"
 Model_parameters:
   Temperature: 0
   Max_tokens: 2048
   Model: gpt-4
+  Encoding: "cl100k_base"
 Methods:
   - File_path: ../test_projects/verification_optimization/unital.dfy
     Method_name: UnitIsUnique

@@ -1,0 +1,21 @@
+Index,Original File,Original Method,Original Method Time,Original Method Result,Original Method File,Assertion,Time Difference,New Method File,New Method,New Method Time,New Method Result,New Result File
+70,/exp/test_projects/Dafny-VMC/src/Distributions/UniformPowerOfTwo/Correctness.dfy,SampleRecursiveHalf,5.064463,Correct,./results/SampleRecursiveHalf_0.txt,"assert E == (iset s | Rand.Head(s) == (m % 2 == 1));
+",,/exp/test_projects/Dafny-VMC/src/Distributions/UniformPowerOfTwo/SampleRecursiveHalf_fix_70.dfy,SampleRecursiveHalf,4.519725,Errors,./results/SampleRecursiveHalf_70.txt
+23,/exp/test_projects/Dafny-VMC/src/Math/Analysis/Limits.dfy,LimitIsAdditive,5.712105,Correct,./results/LimitIsAdditive_0.txt,"assert ExistsCloseSuffix(sequence2, limit2, epsilon / 2.0);
+",,/exp/test_projects/Dafny-VMC/src/Math/Analysis/LimitIsAdditive_fix_23.dfy,LimitIsAdditive,7.371582,Errors,./results/LimitIsAdditive_23.txt
+98,/exp/test_projects/Dafny-VMC/src/ProbabilisticProgramming/Loops.dfy,EnsureUntilTerminates,3.935407,Correct,./results/EnsureUntilTerminates_0.txt,"assert (iset s | proposalIsAccepted(s)) == (iset s | WhileLoopExitsAfterOneIteration(body, reject, a)(s));
+",,/exp/test_projects/Dafny-VMC/src/ProbabilisticProgramming/EnsureUntilTerminates_fix_98.dfy,EnsureUntilTerminates,4.366817,Errors,./results/EnsureUntilTerminates_98.txt
+1,/exp/test_projects/Dafny-VMC/src/Math/Helper.dfy,DivModAddDenominator,3.706939,Correct,./results/DivModAddDenominator_0.txt,"assert 0 == m * zp + ((n + m) % m) - (n % m);
+",,/exp/test_projects/Dafny-VMC/src/Math/DivModAddDenominator_fix_1.dfy,DivModAddDenominator,7.607721,OutOfResource,./results/DivModAddDenominator_1.txt
+94,/exp/test_projects/Dafny-VMC/src/ProbabilisticProgramming/Loops.dfy,WhileUnrollIfConditionSatisfied,3.887351,Correct,./results/WhileUnrollIfConditionSatisfied_0.txt,"assert WhileCutTerminatesWithFuel(condition, body, init', s')(fuel');
+",,/exp/test_projects/Dafny-VMC/src/ProbabilisticProgramming/WhileUnrollIfConditionSatisfied_fix_94.dfy,WhileUnrollIfConditionSatisfied,3.799035,Errors,./results/WhileUnrollIfConditionSatisfied_94.txt
+61,/exp/test_projects/Dafny-VMC/src/Distributions/UniformPowerOfTwo/Correctness.dfy,UnifCorrectness2,3.374044,Correct,./results/UnifCorrectness2_0.txt,"assert UnifIsCorrect(n, k, m);
+",,/exp/test_projects/Dafny-VMC/src/Distributions/UniformPowerOfTwo/UnifCorrectness2_fix_61.dfy,UnifCorrectness2,1.625887,Errors,./results/UnifCorrectness2_61.txt
+28,/exp/test_projects/Dafny-VMC/src/Math/Analysis/Reals.dfy,Sqrt2Exists,3.34815,Correct,./results/Sqrt2Exists_0.txt,"assert 2.0 in upper;
+",,/exp/test_projects/Dafny-VMC/src/Math/Analysis/Sqrt2Exists_fix_28.dfy,Sqrt2Exists,8.27509,Errors,./results/Sqrt2Exists_28.txt
+6,/exp/test_projects/Dafny-VMC/src/Math/Measures.dfy,PosCountAddImpliesAdd,7.751982,Correct,./results/PosCountAddImpliesAdd_0.txt,"assert CountableUnion(f) == e1 + e2;
+",,/exp/test_projects/Dafny-VMC/src/Math/PosCountAddImpliesAdd_fix_6.dfy,PosCountAddImpliesAdd,8.998984,Errors,./results/PosCountAddImpliesAdd_6.txt
+77,/exp/test_projects/Dafny-VMC/src/Distributions/Uniform/Model.dfy,SampleTerminates,3.134541,Correct,./results/SampleTerminates_0.txt,"assert e == Measures.PreImage(UniformPowerOfTwo.Model.Sample(2 * n), resultsLtN);
+",,/exp/test_projects/Dafny-VMC/src/Distributions/Uniform/SampleTerminates_fix_77.dfy,SampleTerminates,3.06655,Errors,./results/SampleTerminates_77.txt
+15,/exp/test_projects/Dafny-VMC/src/Math/Analysis/Limits.dfy,ConstantSequenceConverges,4.641033,Correct,./results/ConstantSequenceConverges_0.txt,"assert SuffixIsClose(Sequences.Constant(constant), constant, epsilon, 0);
+",,/exp/test_projects/Dafny-VMC/src/Math/Analysis/ConstantSequenceConverges_fix_15.dfy,ConstantSequenceConverges,8.210573,Errors,./results/ConstantSequenceConverges_15.txt

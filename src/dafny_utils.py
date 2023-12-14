@@ -2,6 +2,15 @@ import os
 import re
 
 
+def extract_error_message(error_string):
+    pattern = re.compile(r"Error: (.+)")
+    match = pattern.search(error_string)
+    if match:
+        return match.group(1)
+    else:
+        return "Error message not found in the provided string."
+
+
 def parse_assertion_results(file_path):
     with open(file_path, "r") as f:
         data = f.read()

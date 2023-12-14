@@ -3,8 +3,13 @@ import logging
 import os
 import shutil
 import subprocess
-from dafny_utils import parse_assertion_results, replace_method, extract_dafny_functions
-from utils import adjust_microseconds
+from dafny_utils import (
+    parse_assertion_results,
+    replace_method,
+    extract_dafny_functions,
+    extract_error_message,
+)
+from utils import adjust_microseconds, string_difference
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +27,8 @@ class Method:
         self.type = ""
         if type:
             self.type = type
+        self.error_message = ""
+        self.error_file_path = ""
 
     def move_original(self, directory):
         file_name, file_extension = os.path.splitext(os.path.basename(self.file_path))
@@ -127,11 +134,16 @@ class Method:
             )
             logger.debug(result.stdout)
         except subprocess.CalledProcessError as e:
-            self.error_message = e.stdout
             if e.stderr:
                 logger.error(e.stderr)
             if e.stdout:
                 logger.error(e.stdout)
+            self.error_message = extract_error_message(e.stdout)
+            self.error_file_path = f"{results_directory}/{self.method_name}_{self.type}_{self.index}_error.txt"
+            with open(self.error_file_path, "w") as file:
+                file.write(e.stdout)
+            self.entire_error_message = e.stdout
+
         self.verification_outcome = parse_assertion_results(self.dafny_log_file)
         if not self.verification_outcome:
             return False
@@ -147,6 +159,8 @@ class Method:
         except ValueError as e:
             logger.error(e)
             logger.error(time_adjusted)
+            self.verification_time = 0
+            return False
 
         self.verification_time = datetime.timedelta(
             hours=time_obj.hour,
@@ -165,3 +179,8 @@ class Method:
 
     def get_method_content(self, file_content):
         return extract_dafny_functions(file_content, self.method_name)
+
+    def get_diff(self, method_to_compare_content):
+        return string_difference(
+            self.get_method_content(self.get_file_content()), method_to_compare_content
+        )

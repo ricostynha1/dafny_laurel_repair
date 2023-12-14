@@ -13,5 +13,6 @@ tests/ressources/unital_assert.dfy(20,14): Related location: this is the postcon
 
 Dafny program verifier finished with 0 verified, 1 error
 
+INFO - Prompt length: 1014
 INFO - SUCCESS: Second method verifies, and the first one does not.
 INFO - Success rate: 1/1

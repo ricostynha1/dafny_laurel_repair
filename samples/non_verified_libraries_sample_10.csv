@@ -1,0 +1,21 @@
+,Index,Original File,Original Method,Original Method Time,Original Method Result,Original Method File,Assertion,Time Difference,New Method File,New Method,New Method Time,New Method Result,New Result File
+0,45,/exp/test_projects/libraries/src/Collections/Sequences/LittleEndianNat.dfy,LemmaSeqNeq,0.576043,Correct,./results/LemmaSeqNeq_0.txt,"assert xs[..i+1][..i] == xs[..i];
+",,./results/LemmaSeqNeq_fix_45.dfy,LemmaSeqNeq,0.628929,Errors,./results/LemmaSeqNeq_45.txt
+1,360,/exp/test_projects/libraries/src/dafny/NonlinearArithmetic/Internals/MulInternals.dfy,LemmaMulInductionAutoForall,0.494179,Correct,./results/LemmaMulInductionAutoForall_0.txt,"assert forall i {:trigger f(i)} :: IsLe(0, i) && f(i) ==> f(i + 1);
+",,./results/LemmaMulInductionAutoForall_fix_360.dfy,LemmaMulInductionAutoForall,1.422442,Errors,./results/LemmaMulInductionAutoForall_360.txt
+2,255,/exp/test_projects/libraries/src/dafny/Collections/Seqs.dfy,LemmaMaxOfConcat,0.855824,Correct,./results/LemmaMaxOfConcat_0.txt,"assert xs[1..] + ys == (xs + ys)[1..];
+",,./results/LemmaMaxOfConcat_fix_255.dfy,LemmaMaxOfConcat,0.958417,Errors,./results/LemmaMaxOfConcat_255.txt
+3,190,/exp/test_projects/libraries/src/NonlinearArithmetic/Internals/MulInternals.dfy,LemmaMulDistributes,0.669675,Correct,./results/LemmaMulDistributes_0.txt,"assert f2(y);
+",,./results/LemmaMulDistributes_fix_190.dfy,LemmaMulDistributes,0.686236,Errors,./results/LemmaMulDistributes_190.txt
+4,230,/exp/test_projects/libraries/src/dafny/Collections/LittleEndianNat.dfy,LemmaSeqPrefixNeq,0.669911,Correct,./results/LemmaSeqPrefixNeq_0.txt,"assert DropLast(xs[..i+1]) == xs[..i];
+",,./results/LemmaSeqPrefixNeq_fix_230.dfy,LemmaSeqPrefixNeq,68.533977,Errors,./results/LemmaSeqPrefixNeq_230.txt
+5,253,/exp/test_projects/libraries/src/dafny/Collections/Seqs.dfy,LemmaFlattenConcat,0.650339,Correct,./results/LemmaFlattenConcat_0.txt,"assert xs + ys == ys;
+",,./results/LemmaFlattenConcat_fix_253.dfy,LemmaFlattenConcat,0.560261,Errors,./results/LemmaFlattenConcat_253.txt
+6,219,/exp/test_projects/libraries/src/dafny/Collections/Sets.dfy,LemmaUnionSize,0.514706,Correct,./results/LemmaUnionSize_0.txt,"assert xr + yr == xs + ys - {y};
+",,./results/LemmaUnionSize_fix_219.dfy,LemmaUnionSize,0.639555,Errors,./results/LemmaUnionSize_219.txt
+7,183,/exp/test_projects/libraries/src/NonlinearArithmetic/Internals/MulInternals.dfy,LemmaMulInductionAuto,0.612598,Correct,./results/LemmaMulInductionAuto_0.txt,"assert forall i {:trigger f(i)} :: IsLe(i, 0) && f(i) ==> f(i - 1);
+",,./results/LemmaMulInductionAuto_fix_183.dfy,LemmaMulInductionAuto,0.953782,Errors,./results/LemmaMulInductionAuto_183.txt
+8,211,/exp/test_projects/libraries/src/dafny/BinaryOperations.dfy,MonoidInverseIsUnique,0.640487,Correct,./results/MonoidInverseIsUnique_0.txt,"assert IsMonoid(m.bop, m.unit);
+",,./results/MonoidInverseIsUnique_fix_211.dfy,MonoidInverseIsUnique,318.781088,TimedOut,./results/MonoidInverseIsUnique_211.txt
+9,337,/exp/test_projects/libraries/src/dafny/NonlinearArithmetic/Internals/DivInternals.dfy,LemmaDivInductionAutoForall,0.550386,Correct,./results/LemmaDivInductionAutoForall_0.txt,"assert forall i :: IsLe(0, i) && i < n ==> f(i);
+",,./results/LemmaDivInductionAutoForall_fix_337.dfy,LemmaDivInductionAutoForall,0.53475,Errors,./results/LemmaDivInductionAutoForall_337.txt

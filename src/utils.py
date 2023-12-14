@@ -1,4 +1,6 @@
 import csv
+from difflib import ndiff
+import re
 
 
 def adjust_microseconds(time_str, desired_precision):
@@ -48,3 +50,20 @@ def write_csv_header_arg(csv_file_path, header):
     csv_writer = csv.writer(csv_file)
     csv_writer.writerow(header)
     return csv_writer
+
+
+def extract_string_between_backticks(text):
+    pattern = r"```(.*?)```"
+    match = re.search(pattern, text, re.DOTALL)
+    if match:
+        return match.group(1)
+    else:
+        return None
+
+
+def string_difference(str1, str2):
+    lines1 = [line.lstrip() for line in str1.splitlines(keepends=True)]
+    lines2 = [line.lstrip() for line in str2.splitlines(keepends=True)]
+    diff = list(ndiff(lines1, lines2))
+    diff_between_str1_str2 = "".join(s[2:] for s in diff if s[0] == "+")
+    return diff_between_str1_str2

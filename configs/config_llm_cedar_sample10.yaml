@@ -1,4 +1,4 @@
-Results_dir: ./results
+Results_dir: ./results_llm
 Prompt:
   Context:
   - File_to_fix: ./prompts/4586789e1af32732224d7b7c31ccb55035ffac04.dfy
@@ -14,14 +14,14 @@ Prompt:
   System_prompt: "You are a Dafny formal method expert.
   To fix proofs that are brittle or unstable you can add assertions
   inspired from the code or from the ensure annotations."
-  Fix_prompt: "Can you make this proof more stable?"
+  Fix_prompt: "Can you add assertion to fix this proof?"
   Method_context: "File"
+  Feedback: True
 Model_parameters:
   Temperature: 0
-  Max_tokens: 1024
   Model: gpt-4
+  Max_tokens: 2048
+  Prompt_limit: 8192
   Encoding: "cl100k_base"
-Methods:
-  - File_path: ./tests/ressources/unital.dfy
-    Method_name: UnitIsUnique
-Results_file: ./results/fixes_llm_test.csv
+Dafny_args: "--verification-time-limit:300"
+Results_file: ./results_llm/stats_llm_cedar_sample10_context.csv
