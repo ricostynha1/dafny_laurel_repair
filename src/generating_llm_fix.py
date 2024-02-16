@@ -6,6 +6,7 @@ from llm_prompt import Llm_prompt
 from dafny_utils import (
     extract_dafny_functions,
 )
+from error_parser import get_assertion_location
 from config_parsing import parse_config_llm
 from utils import write_csv_header_arg, extract_string_between_backticks
 
@@ -111,6 +112,7 @@ def handle_no_pruning_results(config_file):
 def process_method(method, config, index):
     logger.info("+--------------------------------------+")
     method.run_verification(config["Results_dir"], config.get("Dafny_args", ""))
+    get_assertion_location(method.entire_error_message)
     logger.debug(method)
     try:
         llm_prompt = Llm_prompt(

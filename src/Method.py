@@ -114,6 +114,7 @@ class Method:
         dafny_command = [
             "dafny",
             "verify",
+            "--warn-deprecation:False",
             "--boogie-filter",
             f'"*{self.method_name}*"',
             "--log-format",
