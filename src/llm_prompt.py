@@ -3,6 +3,7 @@ import openai
 import os
 import tiktoken
 from dafny_utils import extract_dafny_functions
+from guidance import system, user, assistant, models, gen
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
@@ -11,9 +12,13 @@ logger = logging.getLogger(__name__)
 
 class Llm_prompt:
     def __init__(self, system_prompt, context):
+        model = models.OpenAI("gpt-4", echo=False)
         messages = []
+        chat = model
         if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
+            with system():
+                messages.append({"role": "system", "content": system_prompt})
+                chat += system_prompt
         for examples in context:
             with open(examples["File_to_fix"], "r") as f:
                 # remove the last line since it is the code url
@@ -27,8 +32,13 @@ class Llm_prompt:
                 fix = "\n".join(f.read().split("\n")[:-1])
             assistant_content = f"{examples['Answer_prompt']} {fix}"
 
+            with user():
+                chat += user_content
+            with assistant():
+                chat += assistant_content
             messages.append({"role": "user", "content": user_content})
             messages.append({"role": "assistant", "content": assistant_content})
+        self.chat = chat
         self.messages = messages
 
     def add_question(
@@ -80,12 +90,13 @@ class Llm_prompt:
                 encoded_context = encoded_context[:token_limit]
                 context = encoding.decode(encoded_context)
                 question += f"\n Context of the method: \n {context}"
+        with user():
+            self.chat += question
         self.messages.append({"role": "user", "content": question})
 
     def save_prompt(self, path):
         with open(path, "w") as f:
-            for message in self.messages:
-                f.write(f"{message['role']}: {message['content']}\n")
+            f.write(str(self.chat))
 
     def get_prompt_length(self, encoding_name):
         encoding = tiktoken.get_encoding(encoding_name)
@@ -94,10 +105,9 @@ class Llm_prompt:
         return num_tokens
 
     def generate_fix(self, model_parameters):
-        response = openai.ChatCompletion.create(
-            model=model_parameters["Model"],
-            temperature=model_parameters["Temperature"],
+        self.chat += gen(
+            "response",
             max_tokens=model_parameters["Max_tokens"],
-            messages=self.messages,
+            temperature=model_parameters["Temperature"],
         )
-        return response
+        return self.chat["response"]

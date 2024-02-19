@@ -136,7 +136,7 @@ def process_method(method, config, index):
         response = llm_prompt.generate_fix(
             config["Model_parameters"],
         )
-        fix_prompt = response["choices"][0]["message"]["content"]
+        fix_prompt = response
         logger.info(fix_prompt)
         code = extract_string_between_backticks(fix_prompt)
         new_method_content = get_new_method_content(
