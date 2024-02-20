@@ -5,6 +5,8 @@ import tiktoken
 from dafny_utils import extract_dafny_functions
 from guidance import system, user, assistant, models, gen
 
+from error_parser import insert_assertion_location
+
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 logger = logging.getLogger(__name__)
@@ -45,6 +47,7 @@ class Llm_prompt:
         self,
         program_to_fix,
         method_name,
+        error_message,
         fix_prompt,
         model_parameters,
         context_option,
@@ -90,8 +93,9 @@ class Llm_prompt:
                 encoded_context = encoded_context[:token_limit]
                 context = encoding.decode(encoded_context)
                 question += f"\n Context of the method: \n {context}"
+
         with user():
-            self.chat += question
+            self.chat += insert_assertion_location(error_message, method)
         self.messages.append({"role": "user", "content": question})
 
     def save_prompt(self, path):
