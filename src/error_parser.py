@@ -58,7 +58,6 @@ def handle_postcondition_not_proved(error_message, method, file_content):
     line_number = find_line_number_path_postcondition(error_message)
     path_line = extract_line_from_file_content(file_content, line_number)
     splitmethod = method.split(path_line)
-    # TODO need a new line somewhere
     return splitmethod[0] + path_line + "\n" + assertion_placeholder + splitmethod[1]
 
 

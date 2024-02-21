@@ -54,7 +54,7 @@ def handle_pruning_results(pruning_results, config_file):
         )
         try:
             new_method, prompt_path, prompt_length, diff = process_method(
-                method, config, method_processed
+                method, config, method_processed, row["Original File"]
             )
             success_count += (
                 1
@@ -87,7 +87,7 @@ def handle_no_pruning_results(config_file):
         original_file_location = method.file_path
         method_processed += 1
         new_method, prompt_path, prompt_length, diff = process_method(
-            method, config, method_processed
+            method, config, method_processed, original_file_location
         )
         success_count += (
             1
@@ -108,46 +108,57 @@ def handle_no_pruning_results(config_file):
     return success_count, method_processed
 
 
-def process_method(method, config, index):
+def process_method(method, config, index, original_file_location):
     logger.info("+--------------------------------------+")
     method.run_verification(config["Results_dir"], config.get("Dafny_args", ""))
     logger.debug(method)
     try:
-        llm_prompt = Llm_prompt(
-            config["Prompt"]["System_prompt"], config["Prompt"]["Context"]
-        )
-        llm_prompt.add_question(
-            method.file_path,
-            method.method_name,
-            method.entire_error_message,
-            config["Prompt"]["Fix_prompt"],
-            config["Model_parameters"],
-            config["Prompt"]["Method_context"],
-            method.entire_error_message if config["Prompt"]["Feedback"] else None,
-        )
-        prompt_path = f"{method.file_path}_{index}_prompt"
-        llm_prompt.save_prompt(prompt_path)
-        prompt_length = llm_prompt.get_prompt_length(
-            config["Model_parameters"]["Encoding"]
-        )
-        logger.info(f"Prompt length: {prompt_length}")
+        for i in range(config["Nb_tries"]):
+            llm_prompt = Llm_prompt(
+                config["Prompt"]["System_prompt"], config["Prompt"]["Context"]
+            )
+            llm_prompt.add_question(
+                method.file_path,
+                method.method_name,
+                method.entire_error_message,
+                config["Prompt"]["Fix_prompt"],
+                config["Model_parameters"],
+                config["Prompt"]["Method_context"],
+                method.entire_error_message if config["Prompt"]["Feedback"] else None,
+            )
+            prompt_path = f"{method.file_path}_{index}_prompt"
+            llm_prompt.save_prompt(prompt_path)
+            prompt_length = llm_prompt.get_prompt_length(
+                config["Model_parameters"]["Encoding"]
+            )
+            logger.info(f"Prompt length: {prompt_length}")
 
-        response = llm_prompt.generate_fix(
-            config["Model_parameters"],
-        )
-        fix_prompt = response
-        logger.info(fix_prompt)
-        code = extract_string_between_backticks(fix_prompt)
-        new_method_content = get_new_method_content(
-            code if code else fix_prompt, method.method_name
-        )
-        diff = method.get_diff(new_method_content)
-        new_method = method.create_modified_method(
-            new_method_content, os.path.dirname(method.file_path), index, "fix"
-        )
-        logger.debug(f"diff : {diff}")
-        method.move_to_results_directory(config["Results_dir"])
-        new_method.run_verification(config["Results_dir"], config.get("Dafny_args", ""))
+            logger.info(f"{method.method_name} ===> Try {i+1}")
+            response = llm_prompt.generate_fix(
+                config["Model_parameters"],
+            )
+            fix_prompt = response
+            logger.info(fix_prompt)
+            code = extract_string_between_backticks(fix_prompt)
+            new_method_content = get_new_method_content(
+                code if code else fix_prompt, method.method_name
+            )
+            diff = method.get_diff(new_method_content)
+            new_method = method.create_modified_method(
+                new_method_content, os.path.dirname(method.file_path), index, "fix"
+            )
+            print(f"method file dirname{os.path.dirname(method.file_path)}")
+            logger.debug(f"diff : {diff}")
+            method.move_to_results_directory(config["Results_dir"])
+            new_method.run_verification(
+                config["Results_dir"], config.get("Dafny_args", "")
+            )
+            if new_method.verification_result == "Correct":
+                break
+            elif i + 1 != config["Nb_tries"]:
+                new_method.move_to_results_directory(config["Results_dir"])
+                shutil.copy(method.file_path, original_file_location)
+                method.file_path = original_file_location
         return new_method, prompt_path, prompt_length, diff
     except Exception as e:
         method.move_to_results_directory(config["Results_dir"])

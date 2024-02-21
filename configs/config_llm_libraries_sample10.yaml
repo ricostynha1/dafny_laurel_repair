@@ -18,10 +18,11 @@ Prompt:
   Method_context: "None"
   Feedback: False
 Model_parameters:
-  Temperature: 0
+  Temperature: 1
   Model: gpt-4
   Max_tokens: 2048
   Prompt_limit: 8192
   Encoding: "cl100k_base"
 Dafny_args: "--use-basename-for-filename --cores:2 --verification-time-limit:300 --disable-nonlinear-arithmetic"
+Nb_tries: 2
 Results_file: ./results_llm/stats_llm_libraries_sample10_context.csv
