@@ -3,20 +3,20 @@ Prompt:
   Context:
   - File_to_fix: ./prompts/4586789e1af32732224d7b7c31ccb55035ffac04.dfy
     Fix: ./prompts/4586789e1af32732224d7b7c31ccb55035ffac04_fix.dfy
-    Question_prompt: "Can you make this proof more stable:\n"
-    Answer_prompt: "Absolutely, you can add an assertion
-    inspired by the postcondition such as:\n"
-  - File_to_fix: ./prompts/109.dfy
-    Fix: ./prompts/109_fix.dfy
-    Question_prompt: "Can you make this proof more stable:\n"
-    Answer_prompt: "Absolutely, you can add assertions
-    in a calc statement made by decomposing the operation using the other lemmas:"
+    Question_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
+    Answer_prompt: ""
+  - File_to_fix: ./prompts/LemmaMaxOfConcat.dfy
+    Fix: ./prompts/LemmaMaxOfConcat_fix.dfy
+    Question_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
+    Answer_prompt: ""
   System_prompt: "You are a Dafny formal method expert.
-  To fix proofs that are brittle or unstable you can add assertions
-  inspired from the code or from the ensure annotations."
-  Fix_prompt: "Can you make this proof more stable?"
-  Method_context: "File"
-  Feedback: True
+  You will be provided with a Dafny method indicated by the delimiter <method>
+  that does not verify because of an error indicated in between <error> tagsalong
+  along with its dependencies with the delimiter <dependencies>.
+  Your task is to insert an assertion in the <assertion> placeholder to make it verify."
+  Fix_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
+  Method_context: "None"
+  Feedback: False
 Model_parameters:
   Temperature: 0
   Model: gpt-4

@@ -5,6 +5,7 @@ lemma LemmaFlattenLengthLeMul<T>(s: seq<seq<T>>, j: int)
     if |s| == 0 {{
     }} else {{
       LemmaFlattenLengthLeMul(s[..|s|-1], j);
+      <assertion> Insert assertion here </assertion>
     }}
   }}
   # https://github.com/dafny-lang/libraries/pull/56/commits/4586789e1af32732224d7b7c31ccb55035ffac04

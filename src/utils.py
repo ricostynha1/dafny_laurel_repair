@@ -67,3 +67,13 @@ def string_difference(str1, str2):
     diff = list(ndiff(lines1, lines2))
     diff_between_str1_str2 = "".join(s[2:] for s in diff if s[0] == "+")
     return diff_between_str1_str2
+
+
+def extract_line_from_file_content(file_content, line_number):
+    lines = file_content.splitlines()  # This handles both \n and \r\n
+
+    # Check if the requested line number is within the range of the file's content
+    if 1 <= line_number <= len(lines):
+        # Return the desired line (considering line numbers start from 1)
+        return lines[line_number - 1]
+    return None

@@ -26,7 +26,9 @@ class Llm_prompt:
                 # remove the last line since it is the code url
                 # TODO clean that
                 code_to_fix = "\n".join(f.read().split("\n")[:-1])
-            user_content = f"{examples['Question_prompt']} {code_to_fix}"
+            user_content = (
+                f"{examples['Question_prompt']} \n <method>\n{code_to_fix}\n </method>"
+            )
 
             with open(examples["Fix"], "r") as f:
                 # remove the last line since it is the code url
@@ -56,6 +58,7 @@ class Llm_prompt:
         with open(program_to_fix, "r") as f:
             content = f.read()
         method = extract_dafny_functions(content, method_name)
+        # Everything but the method
         context = content.replace(method, "")
 
         # current size =
@@ -65,7 +68,10 @@ class Llm_prompt:
         num_tokens_fix_prompt = len(encoding.encode(fix_prompt))
         current_prompt_length += num_tokens_method + num_tokens_fix_prompt
         # depending on feedback included add the feedback
-        question = f"{fix_prompt} {method_name} {method}"
+        method_with_placeholder = insert_assertion_location(
+            error_message, method, content
+        )
+        question = f"{fix_prompt}\n <method> {method_with_placeholder} </method>"
         if feedback:
             num_tokens_feedback = len(encoding.encode(feedback))
             current_prompt_length += num_tokens_feedback
@@ -95,7 +101,7 @@ class Llm_prompt:
                 question += f"\n Context of the method: \n {context}"
 
         with user():
-            self.chat += insert_assertion_location(error_message, method)
+            self.chat += question
         self.messages.append({"role": "user", "content": question})
 
     def save_prompt(self, path):
