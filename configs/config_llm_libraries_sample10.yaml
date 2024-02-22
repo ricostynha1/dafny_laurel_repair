@@ -1,22 +1,24 @@
 Results_dir: ./results_llm
-Prompt:
-  Context:
-  - File_to_fix: ./prompts/4586789e1af32732224d7b7c31ccb55035ffac04.dfy
-    Fix: ./prompts/4586789e1af32732224d7b7c31ccb55035ffac04_fix.dfy
-    Question_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
-    Answer_prompt: ""
-  - File_to_fix: ./prompts/LemmaMaxOfConcat.dfy
-    Fix: ./prompts/LemmaMaxOfConcat_fix.dfy
-    Question_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
-    Answer_prompt: ""
-  System_prompt: "You are a Dafny formal method expert.
-  You will be provided with a Dafny method indicated by the delimiter <method>
-  that does not verify because of an error indicated in between <error> tagsalong
-  along with its dependencies with the delimiter <dependencies>.
-  Your task is to insert an assertion in the <assertion> placeholder to make it verify."
-  Fix_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
-  Method_context: "None"
-  Feedback: False
+Prompts:
+  - Context:
+    - File_to_fix: ./prompts/4586789e1af32732224d7b7c31ccb55035ffac04.dfy
+      Fix: ./prompts/4586789e1af32732224d7b7c31ccb55035ffac04_fix.dfy
+      Question_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
+      Answer_prompt: ""
+    - File_to_fix: ./prompts/LemmaMaxOfConcat.dfy
+      Fix: ./prompts/LemmaMaxOfConcat_fix.dfy
+      Question_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
+      Answer_prompt: ""
+    System_prompt: |
+      "You are a Dafny formal method expert.
+      You will be provided with a Dafny method indicated by the delimiter <method>
+      that does not verify because of an error indicated in between <error> tagsalong
+      along with its dependencies with the delimiter <dependencies>.
+      Your task is to insert an assertion in the <assertion> placeholder to make it verify."
+    Fix_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
+    Method_context: "None"
+    Feedback: False
+    Nb_tries: 2
 Model_parameters:
   Temperature: 1
   Model: gpt-4
@@ -24,5 +26,4 @@ Model_parameters:
   Prompt_limit: 8192
   Encoding: "cl100k_base"
 Dafny_args: "--use-basename-for-filename --cores:2 --verification-time-limit:300 --disable-nonlinear-arithmetic"
-Nb_tries: 2
 Results_file: ./results_llm/stats_llm_libraries_sample10_context.csv

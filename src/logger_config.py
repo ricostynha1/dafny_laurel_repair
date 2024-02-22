@@ -11,7 +11,7 @@ def configure_logger(include_date=True):
     )  # Set the logger level to the lowest level you want to capture
 
     file_handler = logging.FileHandler(LOG_FILE)
-    file_handler.setLevel(logging.DEBUG)
+    file_handler.setLevel(logging.INFO)
 
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
