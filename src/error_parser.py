@@ -27,8 +27,12 @@ def insert_assertion_location(message, method, file_content):
             return handle_postcondition_not_proved(
                 error_message_only, method, file_content
             )
-        case _ if "possible violation of postcondition" in error_message_only:
-            return handle_possible_violation_postcondition(method)
+        case _ if "possible violation of postcondition of forall" in error_message_only:
+            return handle_possible_violation_postcondition_forall(
+                method, error_message_only, file_content
+            )
+        case _ if "cannot establish the existence of LHS values" in error_message_only:
+            return handle_cannot_establish_lhs(method, error_message_only, file_content)
         # TODO what we do for Timeout
         case _:
             raise Exception(
@@ -36,12 +40,21 @@ def insert_assertion_location(message, method, file_content):
             )
 
 
-def handle_possible_violation_postcondition(method):
+def handle_cannot_establish_lhs(method, error_message, file_content):
+    """Insert the assertion before the statement"""
+    line_number = find_line_number_establish_lhs(error_message)
+    line = extract_line_from_file_content(file_content, line_number)
+    splitmethod = method.split(line)
+    return splitmethod[0] + assertion_placeholder + line + splitmethod[1]
+
+
+def handle_possible_violation_postcondition_forall(method, error_message, file_content):
     """Not sure about placement, for now insert assertion at the end of the lemma"""
-    splitmethod = method.splitlines()
-    last_line_index = len(splitmethod) - 1
-    splitmethod.insert(last_line_index, assertion_placeholder)
-    return "\n".join(splitmethod)
+    """placement should be after the open { of the forall """
+    line_number = find_line_possible_violation_forall(error_message)
+    forall_line = extract_line_from_file_content(file_content, line_number)
+    splitmethod = method.split(forall_line)
+    return splitmethod[0] + forall_line + "\n" + assertion_placeholder + splitmethod[1]
 
 
 def handle_precondition_not_proved(error_message, method, file_content):
@@ -63,10 +76,18 @@ def handle_postcondition_not_proved(error_message, method, file_content):
 
 def handle_assertion_might_not_hold(error_message, method, file_content):
     """Insert the placeholder before the assertion that fails"""
-    # Extract the assertion from the error
     line_number = find_line_number_assertion_might_not_hold(error_message)
     assertion_line = extract_line_from_file_content(file_content, line_number)
     splitmethod = method.split(assertion_line)
+    if "by {" in assertion_line:
+        # in this case we want to put the placeholder in the assert by
+        return (
+            splitmethod[0]
+            + "\n"
+            + assertion_line
+            + assertion_placeholder
+            + splitmethod[1]
+        )
     return splitmethod[0] + assertion_placeholder + assertion_line + splitmethod[1]
 
 
@@ -78,6 +99,26 @@ def find_line_number_call_precondition(error_message):
     if match:
         line_number, _ = match.groups()
         return int(line_number)
+    else:
+        raise Exception("Line number not found")
+
+
+def find_line_possible_violation_forall(message):
+    pattern = (
+        r"Error: possible violation of postcondition of forall statement\n\s+\|\n(\d+)"
+    )
+    match = re.search(pattern, message)
+    if match:
+        return int(match.group(1))
+    else:
+        raise Exception("Line number not found")
+
+
+def find_line_number_establish_lhs(message):
+    pattern = r"Error: cannot establish the existence of LHS values that satisfy the such-that predicate\n\s+\|\n(\d+)"
+    match = re.search(pattern, message)
+    if match:
+        return int(match.group(1))
     else:
         raise Exception("Line number not found")
 
