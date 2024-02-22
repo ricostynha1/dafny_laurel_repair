@@ -75,7 +75,7 @@ class Llm_prompt:
         if feedback:
             num_tokens_feedback = len(encoding.encode(feedback))
             current_prompt_length += num_tokens_feedback
-            question += f"\n Error Message given by Dafny: {feedback}"
+            question += f"\n\n <error>\n {feedback} \n </error>"
             logger.debug(f"Feedback added: {num_tokens_feedback}")
 
         # if context enabled:
