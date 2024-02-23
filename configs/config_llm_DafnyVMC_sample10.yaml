@@ -18,9 +18,11 @@ Prompts:
     Fix_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
     Method_context: "None"
     Feedback: False
-    Nb_tries: 6
+    Nb_tries: 1
+    Error_feedback: True
+    Prompt_name: "Test_prompt"
 Model_parameters:
-  Temperature: 0
+  Temperature: 1
   Model: gpt-4
   Max_tokens: 2048
   Prompt_limit: 8192

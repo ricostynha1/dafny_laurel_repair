@@ -104,6 +104,16 @@ class Llm_prompt:
             self.chat += question
         self.messages.append({"role": "user", "content": question})
 
+    def feedback_error_message(self, error_message):
+        error_feedback = (
+            "This is the new error message that we get after the indicated change:\n <error>\n"
+            + error_message
+            + "\n <\error>"
+        )
+        with user():
+            self.chat += error_feedback
+        self.messages.append({"role": "user", "content": error_feedback})
+
     def save_prompt(self, path):
         with open(path, "w") as f:
             f.write(str(self.chat))
@@ -115,9 +125,10 @@ class Llm_prompt:
         return num_tokens
 
     def generate_fix(self, model_parameters):
-        self.chat += gen(
-            "response",
-            max_tokens=model_parameters["Max_tokens"],
-            temperature=model_parameters["Temperature"],
-        )
+        with assistant():
+            self.chat += gen(
+                "response",
+                max_tokens=model_parameters["Max_tokens"],
+                temperature=model_parameters["Temperature"],
+            )
         return self.chat["response"]

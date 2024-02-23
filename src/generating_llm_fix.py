@@ -7,6 +7,7 @@ from dafny_utils import (
     extract_dafny_functions,
 )
 from config_parsing import parse_config_llm
+from error_parser import remove_warning
 from utils import write_csv_header_arg, extract_string_between_backticks
 
 from Method import Method
@@ -42,20 +43,29 @@ def handle_pruning_results(pruning_results, config_file):
         "New Method Error Message File",
         "Prompt File",
         "Prompt Length",
+        "Prompt Index",
+        "Prompt_name",
         "Diff",
     ]
     csv_writer = write_csv_header_arg(config["Results_file"], header)
     for row in pruning_results:
         method_processed += 1
-        # if method_processed > 1:
-        #     break
+        if method_processed != 7:
+            continue
+        # pass
+        # break
         method, tmp_original_file_location = setup_verification_environment(
             config, row, method_processed
         )
         try:
-            new_method, prompt_path, prompt_length, diff = process_method(
-                method, config, method_processed, row["Original File"]
-            )
+            (
+                new_method,
+                prompt_path,
+                prompt_length,
+                diff,
+                prompt_index,
+                prompt_name,
+            ) = process_method(method, config, method_processed, row["Original File"])
             success_count += (
                 1
                 if store_results_and_compare(
@@ -66,6 +76,8 @@ def handle_pruning_results(pruning_results, config_file):
                     prompt_path,
                     prompt_length,
                     diff,
+                    prompt_index,
+                    prompt_name,
                     csv_writer=csv_writer,
                 )
                 else 0
@@ -86,9 +98,14 @@ def handle_no_pruning_results(config_file):
     for method in methods:
         original_file_location = method.file_path
         method_processed += 1
-        new_method, prompt_path, prompt_length, diff = process_method(
-            method, config, method_processed, original_file_location
-        )
+        (
+            new_method,
+            prompt_path,
+            prompt_length,
+            diff,
+            prompt_index,
+            prompt_name,
+        ) = process_method(method, config, method_processed, original_file_location)
         success_count += (
             1
             if store_results_and_compare(
@@ -99,6 +116,8 @@ def handle_no_pruning_results(config_file):
                 prompt_path,
                 prompt_length,
                 diff,
+                prompt_index,
+                prompt_name,
             )
             else 0
         )
@@ -113,8 +132,8 @@ def process_method(method, config, index, original_file_location):
     method.run_verification(config["Results_dir"], config.get("Dafny_args", ""))
     logger.debug(method)
     for prompt_index, config_prompt in enumerate(config["Prompts"], start=1):
-        try:
-            for i in range(config_prompt["Nb_tries"]):
+        for i in range(config_prompt["Nb_tries"]):
+            try:
                 llm_prompt = Llm_prompt(
                     config_prompt["System_prompt"], config_prompt["Context"]
                 )
@@ -153,18 +172,73 @@ def process_method(method, config, index, original_file_location):
                 new_method.run_verification(
                     config["Results_dir"], config.get("Dafny_args", "")
                 )
+                previous_error = remove_warning(method.entire_error_message)
+                new_error = remove_warning(new_method.entire_error_message)
                 if new_method.verification_result == "Correct":
                     logger.info(f"Success with prompt {prompt_index} on try {i}")
-                    return new_method, prompt_path, prompt_length, diff
-                elif i + 1 != config_prompt["Nb_tries"]:
+                    return (
+                        new_method,
+                        prompt_path,
+                        prompt_length,
+                        diff,
+                        prompt_index,
+                        config_prompt["Prompt_name"],
+                    )
+                elif previous_error != new_error and config_prompt["Error_feedback"]:
+                    # reset env
                     new_method.move_to_results_directory(config["Results_dir"])
                     shutil.copy(method.file_path, original_file_location)
                     method.file_path = original_file_location
-            return new_method, prompt_path, prompt_length, diff
-        except Exception as e:
-            method.move_to_results_directory(config["Results_dir"])
-            traceback_str = traceback.format_exc()
-            logger.error(f"An error occurred: {e}\n{traceback_str}")
+
+                    llm_prompt.feedback_error_message(new_error)
+                    llm_prompt.save_prompt(prompt_path)
+                    response = llm_prompt.generate_fix(
+                        config["Model_parameters"],
+                    )
+                    fix_prompt = response
+                    logger.info(fix_prompt)
+                    code = extract_string_between_backticks(fix_prompt)
+                    new_method_content = get_new_method_content(
+                        code if code else fix_prompt, method.method_name
+                    )
+                    diff = method.get_diff(new_method_content)
+                    new_method = method.create_modified_method(
+                        new_method_content,
+                        os.path.dirname(method.file_path),
+                        index,
+                        "fix",
+                    )
+                    logger.debug(f"diff : {diff}")
+                    method.move_to_results_directory(config["Results_dir"])
+                    new_method.run_verification(
+                        config["Results_dir"], config.get("Dafny_args", "")
+                    )
+                    if new_method.verification_result == "Correct":
+                        logger.info(f"Success with prompt {prompt_index} on try {i}")
+                        return (
+                            new_method,
+                            prompt_path,
+                            prompt_length,
+                            diff,
+                            prompt_index,
+                            config_prompt["Prompt_name"],
+                        )
+                if i + 1 != config_prompt["Nb_tries"]:
+                    new_method.move_to_results_directory(config["Results_dir"])
+                    shutil.copy(method.file_path, original_file_location)
+                    method.file_path = original_file_location
+            except Exception as e:
+                method.move_to_results_directory(config["Results_dir"])
+                traceback_str = traceback.format_exc()
+                logger.error(f"An error occurred: {e}\n{traceback_str}")
+        return (
+            new_method,
+            prompt_path,
+            prompt_length,
+            diff,
+            prompt_index,
+            config_prompt["Prompt_name"],
+        )
 
 
 def setup_verification_environment(config, row, index=0):
@@ -208,6 +282,8 @@ def store_results_and_compare(
     prompt_path,
     prompt_length,
     diff,
+    prompt_index,
+    prompt_name,
     csv_writer=None,
 ):
     comparison_result, comparison_details = method.compare(new_method)
@@ -230,6 +306,8 @@ def store_results_and_compare(
         new_method.error_file_path,
         prompt_path,
         prompt_length,
+        prompt_index,
+        prompt_name,
         diff if len(diff) > 5 else "",
     ]
     if csv_writer:
