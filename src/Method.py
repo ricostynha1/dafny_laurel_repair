@@ -22,6 +22,7 @@ class Method:
         self.verification_time = None
         self.verification_result = None
         self.error_message = None
+        self.entire_error_message = None
         self.dafny_log_file = None
         self.index = index
         self.type = ""

@@ -46,10 +46,10 @@ def write_csv_header(csv_file_path):
 
 
 def write_csv_header_arg(csv_file_path, header):
-    csv_file = open(csv_file_path, "a", newline="")
+    csv_file = open(csv_file_path, "w", newline="")
     csv_writer = csv.writer(csv_file)
     csv_writer.writerow(header)
-    return csv_writer
+    return csv_writer, csv_file
 
 
 def extract_string_between_backticks(text):

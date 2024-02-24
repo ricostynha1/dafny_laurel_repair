@@ -2,31 +2,54 @@ import logging
 import os
 import shutil
 import traceback
+import urllib.parse
 from llm_prompt import Llm_prompt
 from dafny_utils import (
     extract_dafny_functions,
 )
 from config_parsing import parse_config_llm
 from error_parser import remove_warning
+from google_uploader import upload_results
 from utils import write_csv_header_arg, extract_string_between_backticks
 
 from Method import Method
 
 logger = logging.getLogger(__name__)
 
+SERVER_NAME = "http://c10-09.sysnet.ucsd.edu:8866/"
 
-def generate_fix_llm(config_file, pruning_results=None):
+
+def generate_fix_llm(config_file, pruning_results=None, pruning_file=None):
     if pruning_results:
-        return handle_pruning_results(pruning_results, config_file)
+        return handle_pruning_results(pruning_results, config_file, pruning_file)
     else:
         return handle_no_pruning_results(config_file)
 
 
-def handle_pruning_results(pruning_results, config_file):
+def generate_notebook_url(result_file, assertion_file, method_index):
+    print(result_file)
+    print(assertion_file)
+    print(method_index)
+    query_params = {
+        "results": result_file,
+        "assertions": assertion_file,
+        "method": method_index,
+    }
+
+    encoded_params = urllib.parse.urlencode(query_params)
+
+    full_url = SERVER_NAME + "?" + encoded_params
+    print(full_url)
+    return full_url
+
+
+def handle_pruning_results(pruning_results, config_file, pruning_file):
+    print(pruning_file)
     _, config = parse_config_llm(config_file)
     method_processed, success_count = 0, 0
 
     header = [
+        "Index",
         "Original Method File",
         "Original Method",
         "Original Method Time",
@@ -46,12 +69,13 @@ def handle_pruning_results(pruning_results, config_file):
         "Prompt Index",
         "Prompt_name",
         "Diff",
+        "Url",
     ]
-    csv_writer = write_csv_header_arg(config["Results_file"], header)
+    csv_writer, file = write_csv_header_arg(config["Results_file"], header)
     for row in pruning_results:
-        method_processed += 1
-        if method_processed != 7:
-            continue
+        # if method_processed != 7:
+        #     method_processed += 1
+        #     continue
         # pass
         # break
         method, tmp_original_file_location = setup_verification_environment(
@@ -66,9 +90,13 @@ def handle_pruning_results(pruning_results, config_file):
                 prompt_index,
                 prompt_name,
             ) = process_method(method, config, method_processed, row["Original File"])
+            notebook_url = generate_notebook_url(
+                config["Results_file"], pruning_file, method_processed
+            )
             success_count += (
                 1
                 if store_results_and_compare(
+                    method_processed,
                     method,
                     new_method,
                     config,
@@ -78,6 +106,7 @@ def handle_pruning_results(pruning_results, config_file):
                     diff,
                     prompt_index,
                     prompt_name,
+                    notebook_url,
                     csv_writer=csv_writer,
                 )
                 else 0
@@ -87,7 +116,10 @@ def handle_pruning_results(pruning_results, config_file):
             logger.error(f"An error occurred: {e}\n{traceback_str}")
         cleanup_environment(tmp_original_file_location, row["Original File"])
         logger.info(f"Success rate: {success_count}/{method_processed}")
+        method_processed += 1
 
+    file.close()
+    upload_results("", config["Results_file"])
     return success_count, method_processed
 
 
@@ -173,7 +205,9 @@ def process_method(method, config, index, original_file_location):
                     config["Results_dir"], config.get("Dafny_args", "")
                 )
                 previous_error = remove_warning(method.entire_error_message)
-                new_error = remove_warning(new_method.entire_error_message)
+                new_error = ""
+                if new_method.entire_error_message is not None:
+                    new_error = remove_warning(new_method.entire_error_message)
                 if new_method.verification_result == "Correct":
                     logger.info(f"Success with prompt {prompt_index} on try {i}")
                     return (
@@ -275,6 +309,7 @@ def cleanup_environment(tmp_original_file_location, original_file_path):
 
 
 def store_results_and_compare(
+    method_index,
     method,
     new_method,
     config,
@@ -284,12 +319,14 @@ def store_results_and_compare(
     diff,
     prompt_index,
     prompt_name,
+    notebook_url,
     csv_writer=None,
 ):
     comparison_result, comparison_details = method.compare(new_method)
     new_method.move_to_results_directory(config["Results_dir"])
     logger.info(comparison_details)
     fix_stats = [
+        method_index,
         original_file,
         method.method_name,
         method.verification_time,
@@ -309,6 +346,7 @@ def store_results_and_compare(
         prompt_index,
         prompt_name,
         diff if len(diff) > 5 else "",
+        notebook_url,
     ]
     if csv_writer:
         csv_writer.writerow(fix_stats)
