@@ -1,4 +1,4 @@
 Results_dir: ./results
-Project_path: ./tests/ressources/unital_pruning.dfy
+Project_path: ./tests_package/ressources/unital_pruning.dfy
 Dafny_args: "--cores:2 --verification-time-limit:300"
 Stats_file: ./results/stats_pruning_libraries_test.txt

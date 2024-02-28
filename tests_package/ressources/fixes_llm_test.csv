@@ -1,0 +1,4 @@
+Index,Original Method File,Original Method,Original Method Time,Original Method Result,Original Result File,Original Error Message,Original Error Message File,New Method File,New Method,New Method Time,New Method Result,New Method Result File,New Method Error Message,New Method Error Message File,Prompt File,Prompt Length,Prompt Index,Prompt_name,Diff,Url
+0,./tests/ressources/pruned/unital_assert.dfy,UnitIsUnique,0.527108,Errors,./results/UnitIsUnique_0.txt,a postcondition could not be proved on this return path,./results/UnitIsUnique__0_error.txt,./results/UnitIsUnique_fix_0.dfy,UnitIsUnique,0.515398,Correct,./results/UnitIsUnique_fix_0.txt,,,./tests/ressources/unital_assert.dfy_0_prompt,934,1,error_n_feedback,"assert unit1 == bop(unit1, unit2);
+assert unit2 == bop(unit2, unit1);
+}",http://c10-09.sysnet.ucsd.edu:8866/?results=.%2Ftests_package%2Fressources%2Ffixes_llm_test.csv&assertions=.%2Ftests_package%2Fressources%2Fllm_test.csv&method=0

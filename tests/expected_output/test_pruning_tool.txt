@@ -1,7 +1,0 @@
-INFO - ==== Starting the assertion pruning ====
-INFO - Starting file 1/1:./tests/ressources/unital_pruning.dfy
-INFO - Starting assertion 1/2 for UnitIsUnique
-INFO - Creating modified method for UnitIsUnique in ./tests/ressources/UnitIsUnique_fix_1.dfy
-INFO - Starting assertion 2/2 for UnitIsUnique
-INFO - Creating modified method for UnitIsUnique in ./tests/ressources/UnitIsUnique_fix_2.dfy
-INFO - ==== Finished file ./tests/ressources/unital_pruning.dfy 1/1 =====

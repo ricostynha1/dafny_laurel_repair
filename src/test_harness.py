@@ -1,7 +1,6 @@
 import argparse
 
 from logger_config import configure_logger
-from utils import read_pruning_result
 from generating_llm_fix import generate_fix_llm
 from pruning import remove_assertions
 
@@ -44,10 +43,8 @@ if __name__ == "__main__":
         logger.info("==== Starting the llm fix ====")
         if args.pruning_results:
             methods = []
-            pruning_results = read_pruning_result(args.pruning_results)
             generate_fix_llm(
                 args.config_file,
-                pruning_results=pruning_results,
                 pruning_file=args.pruning_results,
             )
         else:

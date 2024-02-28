@@ -24,8 +24,9 @@ class TestsPruning(unittest.TestCase):
             if e.stdout:
                 print(e.stdout)
 
-        expected_output_file = "./tests/expected_output/test_pruning_tool.txt"
+        expected_output_file = "./tests_package/expected_output/test_pruning_tool.txt"
         with open(expected_output_file, "r") as f:
             expected_output = f.read()
             # Remove the \n in the end of the file
+            self.maxDiff = None
             self.assertEqual(result.stderr.strip(), expected_output[:-1])

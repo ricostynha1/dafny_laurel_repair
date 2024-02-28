@@ -10,7 +10,11 @@ from dafny_utils import (
 from config_parsing import parse_config_llm
 from error_parser import remove_warning
 from google_uploader import upload_results
-from utils import write_csv_header_arg, extract_string_between_backticks
+from utils import (
+    write_csv_header_arg,
+    extract_string_between_backticks,
+    read_pruning_result,
+)
 
 from Method import Method
 
@@ -19,9 +23,9 @@ logger = logging.getLogger(__name__)
 SERVER_NAME = "http://c10-09.sysnet.ucsd.edu:8866/"
 
 
-def generate_fix_llm(config_file, pruning_results=None, pruning_file=None):
-    if pruning_results:
-        return handle_pruning_results(pruning_results, config_file, pruning_file)
+def generate_fix_llm(config_file, pruning_file=None):
+    if pruning_file:
+        return handle_pruning_results(config_file, pruning_file)
     else:
         return handle_no_pruning_results(config_file)
 
@@ -43,8 +47,8 @@ def generate_notebook_url(result_file, assertion_file, method_index):
     return full_url
 
 
-def handle_pruning_results(pruning_results, config_file, pruning_file):
-    print(pruning_file)
+def handle_pruning_results(config_file, pruning_file):
+    pruning_results = read_pruning_result(pruning_file)
     _, config = parse_config_llm(config_file)
     method_processed, success_count = 0, 0
 
@@ -89,6 +93,7 @@ def handle_pruning_results(pruning_results, config_file, pruning_file):
                 diff,
                 prompt_index,
                 prompt_name,
+                success,
             ) = process_method(method, config, method_processed, row["Original File"])
             notebook_url = generate_notebook_url(
                 config["Results_file"], pruning_file, method_processed
@@ -217,6 +222,7 @@ def process_method(method, config, index, original_file_location):
                         diff,
                         prompt_index,
                         config_prompt["Prompt_name"],
+                        True,
                     )
                 elif previous_error != new_error and config_prompt["Error_feedback"]:
                     # reset env
@@ -256,6 +262,7 @@ def process_method(method, config, index, original_file_location):
                             diff,
                             prompt_index,
                             config_prompt["Prompt_name"],
+                            True,
                         )
                 if i + 1 != config_prompt["Nb_tries"]:
                     new_method.move_to_results_directory(config["Results_dir"])
@@ -272,6 +279,7 @@ def process_method(method, config, index, original_file_location):
             diff,
             prompt_index,
             config_prompt["Prompt_name"],
+            False,
         )
 
 
