@@ -103,6 +103,7 @@ def handle_pruning_results(config_file, pruning_file):
                 config["Results_file"], pruning_file, method_processed
             )
             method.move_to_results_directory(os.path.dirname(row["New Method File"]))
+            new_method.move_to_results_directory(config["Results_dir"])
             success_count += (
                 1
                 if store_results_and_compare(
@@ -175,6 +176,31 @@ def handle_no_pruning_results(config_file):
     return success_count, method_processed
 
 
+def test_prompt(llm_prompt, prompt_path, config, method, index, try_nb):
+    llm_prompt.save_prompt(prompt_path)
+    prompt_length = llm_prompt.get_prompt_length(config["Model_parameters"]["Encoding"])
+    logger.info(f"Prompt length: {prompt_length}")
+
+    logger.info(f"{method.method_name} ===> Try {try_nb+1}")
+    response = llm_prompt.generate_fix(
+        config["Model_parameters"],
+    )
+    fix_prompt = response
+    logger.info(fix_prompt)
+    code = extract_string_between_backticks(fix_prompt)
+    new_method_content = get_new_method_content(
+        code if code else fix_prompt, method.method_name
+    )
+    diff = method.get_diff(new_method_content)
+    new_method = method.create_modified_method(
+        new_method_content, os.path.dirname(method.file_path), index, "fix"
+    )
+    logger.debug(f"diff : {diff}")
+    method.move_to_results_directory(config["Results_dir"])
+    new_method.run_verification(config["Results_dir"], config.get("Dafny_args", ""))
+    return new_method, diff, prompt_length
+
+
 def process_method(method, config, index, original_file_location, original_method_file):
     logger.info("+--------------------------------------+")
     method.run_verification(config["Results_dir"], config.get("Dafny_args", ""))
@@ -195,30 +221,8 @@ def process_method(method, config, index, original_file_location, original_metho
                     method.entire_error_message if config_prompt["Feedback"] else None,
                 )
                 prompt_path = f"{method.file_path}_{index}_prompt"
-                llm_prompt.save_prompt(prompt_path)
-                prompt_length = llm_prompt.get_prompt_length(
-                    config["Model_parameters"]["Encoding"]
-                )
-                logger.info(f"Prompt length: {prompt_length}")
-
-                logger.info(f"{method.method_name} ===> Try {i+1}")
-                response = llm_prompt.generate_fix(
-                    config["Model_parameters"],
-                )
-                fix_prompt = response
-                logger.info(fix_prompt)
-                code = extract_string_between_backticks(fix_prompt)
-                new_method_content = get_new_method_content(
-                    code if code else fix_prompt, method.method_name
-                )
-                diff = method.get_diff(new_method_content)
-                new_method = method.create_modified_method(
-                    new_method_content, os.path.dirname(method.file_path), index, "fix"
-                )
-                logger.debug(f"diff : {diff}")
-                method.move_to_results_directory(config["Results_dir"])
-                new_method.run_verification(
-                    config["Results_dir"], config.get("Dafny_args", "")
+                new_method, diff, prompt_length = test_prompt(
+                    llm_prompt, prompt_path, config, method, index, i
                 )
                 previous_error = remove_warning(method.entire_error_message)
                 new_error = ""
@@ -241,27 +245,8 @@ def process_method(method, config, index, original_file_location, original_metho
                     method.file_path = original_method_file
 
                     llm_prompt.feedback_error_message(new_error)
-                    llm_prompt.save_prompt(prompt_path)
-                    response = llm_prompt.generate_fix(
-                        config["Model_parameters"],
-                    )
-                    fix_prompt = response
-                    logger.info(fix_prompt)
-                    code = extract_string_between_backticks(fix_prompt)
-                    new_method_content = get_new_method_content(
-                        code if code else fix_prompt, method.method_name
-                    )
-                    diff = method.get_diff(new_method_content)
-                    new_method = method.create_modified_method(
-                        new_method_content,
-                        os.path.dirname(method.file_path),
-                        index,
-                        "fix",
-                    )
-                    logger.debug(f"diff : {diff}")
-                    method.move_to_results_directory(config["Results_dir"])
-                    new_method.run_verification(
-                        config["Results_dir"], config.get("Dafny_args", "")
+                    new_method, diff, prompt_length = test_prompt(
+                        llm_prompt, prompt_path, config, method, index, i
                     )
                     if new_method.verification_result == "Correct":
                         logger.info(f"Success with prompt {prompt_index} on try {i}")
@@ -275,10 +260,10 @@ def process_method(method, config, index, original_file_location, original_metho
                             True,
                         )
                 if i + 1 != config_prompt["Nb_tries"]:
+                    new_method.move_to_results_directory(config["Results_dir"])
                     shutil.copy(method.file_path, original_file_location)
                     method.file_path = original_file_location
             except Exception as e:
-                # method.move_to_results_directory(config["Results_dir"])
                 traceback_str = traceback.format_exc()
                 logger.error(f"An error occurred: {e}\n{traceback_str}")
         return (
@@ -341,7 +326,6 @@ def store_results_and_compare(
     csv_writer=None,
 ):
     comparison_result, comparison_details = method.compare(new_method)
-    new_method.move_to_results_directory(config["Results_dir"])
     logger.info(comparison_details)
     fix_stats = [
         method_index,
