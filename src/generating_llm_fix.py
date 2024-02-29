@@ -31,9 +31,6 @@ def generate_fix_llm(config_file, pruning_file=None):
 
 
 def generate_notebook_url(result_file, assertion_file, method_index):
-    print(result_file)
-    print(assertion_file)
-    print(method_index)
     query_params = {
         "results": result_file,
         "assertions": assertion_file,
@@ -43,7 +40,6 @@ def generate_notebook_url(result_file, assertion_file, method_index):
     encoded_params = urllib.parse.urlencode(query_params)
 
     full_url = SERVER_NAME + "?" + encoded_params
-    print(full_url)
     return full_url
 
 
@@ -82,9 +78,11 @@ def handle_pruning_results(config_file, pruning_file):
         #     continue
         # pass
         # break
-        method, tmp_original_file_location = setup_verification_environment(
-            config, row, method_processed
-        )
+        (
+            method,
+            tmp_original_file_location,
+            original_method_file,
+        ) = setup_verification_environment(config, row, method_processed)
         try:
             (
                 new_method,
@@ -94,10 +92,17 @@ def handle_pruning_results(config_file, pruning_file):
                 prompt_index,
                 prompt_name,
                 success,
-            ) = process_method(method, config, method_processed, row["Original File"])
+            ) = process_method(
+                method,
+                config,
+                method_processed,
+                row["New Method File"],
+                original_method_file,
+            )
             notebook_url = generate_notebook_url(
                 config["Results_file"], pruning_file, method_processed
             )
+            method.move_to_results_directory(os.path.dirname(row["New Method File"]))
             success_count += (
                 1
                 if store_results_and_compare(
@@ -142,7 +147,14 @@ def handle_no_pruning_results(config_file):
             diff,
             prompt_index,
             prompt_name,
-        ) = process_method(method, config, method_processed, original_file_location)
+        ) = process_method(
+            method,
+            config,
+            method_processed,
+            original_file_location,
+            original_file_location,
+        )
+        shutil.copy(method.file_path, original_file_location)
         success_count += (
             1
             if store_results_and_compare(
@@ -158,13 +170,12 @@ def handle_no_pruning_results(config_file):
             )
             else 0
         )
-        shutil.copy(method.file_path, original_file_location)
         logger.info(f"Success rate: {success_count}/{method_processed}")
 
     return success_count, method_processed
 
 
-def process_method(method, config, index, original_file_location):
+def process_method(method, config, index, original_file_location, original_method_file):
     logger.info("+--------------------------------------+")
     method.run_verification(config["Results_dir"], config.get("Dafny_args", ""))
     logger.debug(method)
@@ -225,10 +236,9 @@ def process_method(method, config, index, original_file_location):
                         True,
                     )
                 elif previous_error != new_error and config_prompt["Error_feedback"]:
-                    # reset env
                     new_method.move_to_results_directory(config["Results_dir"])
-                    shutil.copy(method.file_path, original_file_location)
-                    method.file_path = original_file_location
+                    shutil.copy(original_file_location, original_method_file)
+                    method.file_path = original_method_file
 
                     llm_prompt.feedback_error_message(new_error)
                     llm_prompt.save_prompt(prompt_path)
@@ -265,11 +275,10 @@ def process_method(method, config, index, original_file_location):
                             True,
                         )
                 if i + 1 != config_prompt["Nb_tries"]:
-                    new_method.move_to_results_directory(config["Results_dir"])
                     shutil.copy(method.file_path, original_file_location)
                     method.file_path = original_file_location
             except Exception as e:
-                method.move_to_results_directory(config["Results_dir"])
+                # method.move_to_results_directory(config["Results_dir"])
                 traceback_str = traceback.format_exc()
                 logger.error(f"An error occurred: {e}\n{traceback_str}")
         return (
@@ -301,6 +310,7 @@ def setup_verification_environment(config, row, index=0):
     return (
         Method(original_method_file, row["Original Method"], index=index),
         tmp_original_file_location,
+        original_method_file,
     )
 
 

@@ -1,11 +1,12 @@
 import csv
-from generating_llm_fix import generate_fix_llm
+import sys
+import os
 import unittest
 from unittest.mock import patch
-import sys
 from io import StringIO
 
 sys.path.append("./src")
+from generating_llm_fix import generate_fix_llm
 
 
 class TestsLLM(unittest.TestCase):
@@ -35,7 +36,7 @@ class TestsLLM(unittest.TestCase):
 
         # check that the result file is correct
         expected_content = """Index,Original Method File,Original Method,Original Method Time,Original Method Result,Original Result File,Original Error Message,Original Error Message File,New Method File,New Method,New Method Time,New Method Result,New Method Result File,New Method Error Message,New Method Error Message File,Prompt File,Prompt Length,Prompt Index,Prompt_name,Diff,Url
-0,./tests/ressources/pruned/unital_assert.dfy,UnitIsUnique,0.522336,Errors,./results/UnitIsUnique_0.txt,a postcondition could not be proved on this return path,./results/UnitIsUnique__0_error.txt,./results/UnitIsUnique_fix_0.dfy,UnitIsUnique,0.510024,Correct,./results/UnitIsUnique_fix_0.txt,,,./tests/ressources/unital_assert.dfy_0_prompt,934,1,error_n_feedback,"assert unit1 == bop(unit1, unit2);
+0,./tests_package/ressources/pruned/unital_assert.dfy,UnitIsUnique,0.522336,Errors,./results/UnitIsUnique_0.txt,a postcondition could not be proved on this return path,./results/UnitIsUnique__0_error.txt,./results/UnitIsUnique_fix_0.dfy,UnitIsUnique,0.510024,Correct,./results/UnitIsUnique_fix_0.txt,,,./tests_package/ressources/unital_assert.dfy_0_prompt,936,1,error_n_feedback,"assert unit1 == bop(unit1, unit2);
 assert unit2 == bop(unit2, unit1);
 }",http://c10-09.sysnet.ucsd.edu:8866/?results=.%2Ftests_package%2Fressources%2Ffixes_llm_test.csv&assertions=.%2Ftests_package%2Fressources%2Fllm_test.csv&method=0
         """
@@ -57,6 +58,7 @@ assert unit2 == bop(unit2, unit1);
     @patch("generating_llm_fix.upload_results")
     @patch("generating_llm_fix.Llm_prompt.generate_fix")
     def test_generate_fix_2_tries(self, mock_Llm_prompt, mock_upload_results):
+        self.maxDiff = None
         pruning_file = "./tests_package/ressources/llm_test.csv"
         config_file = "./tests_package/ressources/config_llm_test.yaml"
 
@@ -90,3 +92,7 @@ assert unit2 == bop(unit2, unit1);
         with open(original_file, "r") as file:
             new_content = file.read()
             self.assertEqual(original_content, new_content)
+
+        self.assertFalse(
+            os.path.exists("./tests_package/ressources/UnitIsUnique_fix_0.dfy")
+        )

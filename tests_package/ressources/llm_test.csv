@@ -1,2 +1,2 @@
 Index,Original File,Original Method,Assertion,Time difference,New Method File,New method time,New method result,Old method time
-1,./tests/ressources/unital_pruning.dfy,UnitIsUnique,"assert unit1 == bop(unit1, unit2);",0.0022919999999999607,./tests/ressources/pruned/unital_assert.dfy,0.505035,True,0.507327
+1,./tests_package/ressources/unital_pruning.dfy,UnitIsUnique,"assert unit1 == bop(unit1, unit2);",0.0022919999999999607,./tests_package/ressources/pruned/unital_assert.dfy,0.505035,True,0.507327

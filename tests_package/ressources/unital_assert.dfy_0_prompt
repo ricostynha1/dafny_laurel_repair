@@ -72,12 +72,12 @@ Can you fix this proof by inserting one assertion in the <assertion> placeholder
  </method>
 
  <error>
- tests/ressources/unital_assert.dfy(21,0): Error: a postcondition could not be proved on this return path
+ tests_package/ressources/unital_assert.dfy(21,0): Error: a postcondition could not be proved on this return path
    |
 21 | {
    | ^
 
-tests/ressources/unital_assert.dfy(20,14): Related location: this is the postcondition that could not be proved
+tests_package/ressources/unital_assert.dfy(20,14): Related location: this is the postcondition that could not be proved
    |
 20 |       ensures unit1 == unit2
    |               ^^^^^^^^^^^^^^

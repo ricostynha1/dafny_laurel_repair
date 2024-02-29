@@ -27,6 +27,9 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
+ignore = [
+  "E402"
+]
 exclude = [
   ".ipynb_checkpoints",
   ".pre-commit-config.yaml",

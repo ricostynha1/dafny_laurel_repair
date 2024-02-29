@@ -17,6 +17,7 @@ Prompts:
       Your task is to insert an assertion in the <assertion> placeholder to make it verify."
     Fix_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
     Method_context: "None"
+    Error_feedback: False
     Feedback: False
     Nb_tries: 6
 Model_parameters:
