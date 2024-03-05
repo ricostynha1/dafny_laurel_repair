@@ -11,6 +11,41 @@ def extract_error_message(error_string):
         return "Error message not found in the provided string."
 
 
+def extract_info_error_message(error_paragraph):
+    # Extract line number
+    line_number = re.search(r"\((\d+),\d+\)", error_paragraph).group(1)
+    # Extract message after the file name
+    message = re.search(r"\): (.+)", error_paragraph).group(1)
+    # Extract code
+    code = re.search(r"\| +(.+)", error_paragraph).group(1)
+    return (line_number, message, code)
+
+
+def compare_section_error_message(section1, section2):
+    info1 = extract_info_error_message(section1)
+    info2 = extract_info_error_message(section2)
+    if info1[0] == info2[0] and info1[1:] == info2[1:]:
+        return True
+    else:
+        return False
+
+
+def compare_errormessage(previous_output, new_output):
+    prev_sections = previous_output.split("\n\n")
+    new_sections = new_output.split("\n\n")
+
+    if len(prev_sections) != len(new_sections):
+        return False
+
+    for prev_section, new_section in zip(prev_sections, new_sections):
+        if prev_section == new_section:
+            continue
+        if not compare_section_error_message(prev_section, new_section):
+            return False
+
+    return True
+
+
 def parse_assertion_results(file_path):
     with open(file_path, "r") as f:
         data = f.read()

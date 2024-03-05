@@ -1,4 +1,5 @@
 import logging
+import json
 import openai
 import os
 import tiktoken
@@ -27,7 +28,7 @@ class Llm_prompt:
                 # TODO clean that
                 code_to_fix = "\n".join(f.read().split("\n")[:-1])
             user_content = (
-                f"{examples['Question_prompt']} \n <method>\n{code_to_fix}\n </method>"
+                f"{examples['Question_prompt']}\n<method>\n{code_to_fix}\n</method>"
             )
 
             with open(examples["Fix"], "r") as f:
@@ -75,7 +76,7 @@ class Llm_prompt:
         if feedback:
             num_tokens_feedback = len(encoding.encode(feedback))
             current_prompt_length += num_tokens_feedback
-            question += f"\n\n <error>\n {feedback} \n </error>"
+            question += f"\n\n<error>\n{feedback}\n</error>"
             logger.debug(f"Feedback added: {num_tokens_feedback}")
 
         # if context enabled:
@@ -116,13 +117,18 @@ class Llm_prompt:
 
     def save_prompt(self, path):
         with open(path, "w") as f:
-            f.write(str(self.chat))
+            json.dump(self.messages, f)
 
     def get_prompt_length(self, encoding_name):
         encoding = tiktoken.get_encoding(encoding_name)
         content_string = "".join(item["content"] for item in self.messages)
         num_tokens = len(encoding.encode(content_string))
         return num_tokens
+
+    def get_fix(self, model_parameters):
+        fix = self.generate_fix(model_parameters)
+        self.messages.append({"role": "assistant", "content": fix})
+        return fix
 
     def generate_fix(self, model_parameters):
         with assistant():

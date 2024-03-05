@@ -17,11 +17,13 @@ Prompts:
       Your task is to insert an assertion in the <assertion> placeholder to make it verify."
     Fix_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
     Method_context: "None"
-    Error_feedback: False
-    Feedback: False
-    Nb_tries: 6
+    Error_feedback: True
+    Feedback: True
+    Nb_tries: 10
+    Prompt_name: "error_n_feedback"
+
 Model_parameters:
-  Temperature: 0
+  Temperature: 1
   Model: gpt-4
   Max_tokens: 2048
   Prompt_limit: 8192

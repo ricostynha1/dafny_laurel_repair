@@ -3,20 +3,21 @@ import os
 import shutil
 import traceback
 import urllib.parse
-from llm_prompt import Llm_prompt
+
+from config_parsing import parse_config_llm
 from dafny_utils import (
+    compare_errormessage,
     extract_dafny_functions,
 )
-from config_parsing import parse_config_llm
 from error_parser import remove_warning
 from google_uploader import upload_results
+from llm_prompt import Llm_prompt
+from Method import Method
 from utils import (
-    write_csv_header_arg,
     extract_string_between_backticks,
     read_pruning_result,
+    write_csv_header_arg,
 )
-
-from Method import Method
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +68,10 @@ def handle_pruning_results(config_file, pruning_file):
         "Prompt File",
         "Prompt Length",
         "Prompt Index",
-        "Prompt_name",
+        "Prompt name",
+        "Error message",
+        "Feedback",
+        "Try",
         "Diff",
         "Url",
     ]
@@ -84,6 +88,9 @@ def handle_pruning_results(config_file, pruning_file):
             original_method_file,
         ) = setup_verification_environment(config, row, method_processed)
         try:
+            notebook_url = generate_notebook_url(
+                config["Results_file"], pruning_file, method_processed
+            )
             (
                 new_method,
                 prompt_path,
@@ -98,12 +105,9 @@ def handle_pruning_results(config_file, pruning_file):
                 method_processed,
                 row["New Method File"],
                 original_method_file,
+                csv_writer,
+                notebook_url,
             )
-            notebook_url = generate_notebook_url(
-                config["Results_file"], pruning_file, method_processed
-            )
-            method.move_to_results_directory(os.path.dirname(row["New Method File"]))
-            new_method.move_to_results_directory(config["Results_dir"])
             success_count += (
                 1
                 if store_results_and_compare(
@@ -130,7 +134,7 @@ def handle_pruning_results(config_file, pruning_file):
         method_processed += 1
 
     file.close()
-    upload_results("", config["Results_file"])
+    upload_results(config_file, config["Results_file"])
     return success_count, method_processed
 
 
@@ -154,6 +158,7 @@ def handle_no_pruning_results(config_file):
             method_processed,
             original_file_location,
             original_file_location,
+            None,
         )
         shutil.copy(method.file_path, original_file_location)
         success_count += (
@@ -177,12 +182,8 @@ def handle_no_pruning_results(config_file):
 
 
 def test_prompt(llm_prompt, prompt_path, config, method, index, try_nb):
-    llm_prompt.save_prompt(prompt_path)
-    prompt_length = llm_prompt.get_prompt_length(config["Model_parameters"]["Encoding"])
-    logger.info(f"Prompt length: {prompt_length}")
-
     logger.info(f"{method.method_name} ===> Try {try_nb+1}")
-    response = llm_prompt.generate_fix(
+    response = llm_prompt.get_fix(
         config["Model_parameters"],
     )
     fix_prompt = response
@@ -193,24 +194,36 @@ def test_prompt(llm_prompt, prompt_path, config, method, index, try_nb):
     )
     diff = method.get_diff(new_method_content)
     new_method = method.create_modified_method(
-        new_method_content, os.path.dirname(method.file_path), index, "fix"
+        new_method_content, os.path.dirname(method.file_path), index, try_nb, "fix"
     )
     logger.debug(f"diff : {diff}")
     method.move_to_results_directory(config["Results_dir"])
     new_method.run_verification(config["Results_dir"], config.get("Dafny_args", ""))
-    return new_method, diff, prompt_length
+    return new_method, diff
 
 
-def process_method(method, config, index, original_file_location, original_method_file):
+def process_method(
+    method,
+    config,
+    index,
+    original_file_location,
+    original_method_file,
+    csv_writer,
+    notebook_url,
+):
     logger.info("+--------------------------------------+")
     method.run_verification(config["Results_dir"], config.get("Dafny_args", ""))
     logger.debug(method)
+    new_method = None
+    diff = ""
     for prompt_index, config_prompt in enumerate(config["Prompts"], start=1):
         for i in range(config_prompt["Nb_tries"]):
+            feedback = False
             try:
                 llm_prompt = Llm_prompt(
                     config_prompt["System_prompt"], config_prompt["Context"]
                 )
+                prompt_path = f"{method.file_path}_{index}_{i}_prompt"
                 llm_prompt.add_question(
                     method.file_path,
                     method.method_name,
@@ -220,16 +233,40 @@ def process_method(method, config, index, original_file_location, original_metho
                     config_prompt["Method_context"],
                     method.entire_error_message if config_prompt["Feedback"] else None,
                 )
-                prompt_path = f"{method.file_path}_{index}_prompt"
-                new_method, diff, prompt_length = test_prompt(
+                new_method, diff = test_prompt(
                     llm_prompt, prompt_path, config, method, index, i
                 )
+                llm_prompt.save_prompt(prompt_path)
+                prompt_length = llm_prompt.get_prompt_length(
+                    config["Model_parameters"]["Encoding"]
+                )
+                logger.info(f"Prompt length: {prompt_length}")
                 previous_error = remove_warning(method.entire_error_message)
                 new_error = ""
                 if new_method.entire_error_message is not None:
                     new_error = remove_warning(new_method.entire_error_message)
                 if new_method.verification_result == "Correct":
                     logger.info(f"Success with prompt {prompt_index} on try {i}")
+                    method.move_to_results_directory(
+                        os.path.dirname(original_file_location)
+                    )
+                    new_method.move_to_results_directory(config["Results_dir"])
+                    store_results(
+                        index,
+                        method,
+                        new_method,
+                        original_file_location,
+                        prompt_path,
+                        prompt_length,
+                        prompt_index,
+                        config_prompt["Prompt_name"],
+                        "",
+                        feedback,
+                        i,
+                        diff,
+                        notebook_url,
+                        csv_writer,
+                    )
                     return (
                         new_method,
                         prompt_path,
@@ -239,16 +276,46 @@ def process_method(method, config, index, original_file_location, original_metho
                         config_prompt["Prompt_name"],
                         True,
                     )
-                elif previous_error != new_error and config_prompt["Error_feedback"]:
+                elif (
+                    not compare_errormessage(previous_error, new_error)
+                    and config_prompt["Error_feedback"]
+                ):
+                    feedback = True
                     new_method.move_to_results_directory(config["Results_dir"])
-                    shutil.copy(original_file_location, original_method_file)
+                    # shutil.copy(original_file_location, original_method_file)
+                    shutil.copy(method.file_path, original_method_file)
                     method.file_path = original_method_file
 
                     llm_prompt.feedback_error_message(new_error)
-                    new_method, diff, prompt_length = test_prompt(
+                    new_method, diff = test_prompt(
                         llm_prompt, prompt_path, config, method, index, i
                     )
+                    llm_prompt.save_prompt(prompt_path)
+                    prompt_length = llm_prompt.get_prompt_length(
+                        config["Model_parameters"]["Encoding"]
+                    )
+                    logger.info(f"Prompt length: {prompt_length}")
                     if new_method.verification_result == "Correct":
+                        method.move_to_results_directory(
+                            os.path.dirname(original_file_location)
+                        )
+                        new_method.move_to_results_directory(config["Results_dir"])
+                        store_results(
+                            index,
+                            method,
+                            new_method,
+                            original_file_location,
+                            prompt_path,
+                            prompt_length,
+                            prompt_index,
+                            config_prompt["Prompt_name"],
+                            "",
+                            feedback,
+                            i,
+                            diff,
+                            notebook_url,
+                            csv_writer,
+                        )
                         logger.info(f"Success with prompt {prompt_index} on try {i}")
                         return (
                             new_method,
@@ -260,12 +327,61 @@ def process_method(method, config, index, original_file_location, original_metho
                             True,
                         )
                 if i + 1 != config_prompt["Nb_tries"]:
+                    # method.move_to_results_directory(
+                    #     os.path.dirname(original_method_file)
+                    # )
                     new_method.move_to_results_directory(config["Results_dir"])
-                    shutil.copy(method.file_path, original_file_location)
-                    method.file_path = original_file_location
+                    store_results(
+                        index,
+                        method,
+                        new_method,
+                        original_file_location,
+                        prompt_path,
+                        prompt_length,
+                        prompt_index,
+                        config_prompt["Prompt_name"],
+                        "",
+                        feedback,
+                        i,
+                        diff,
+                        notebook_url,
+                        csv_writer,
+                    )
+                    method.move_to_results_directory(
+                        os.path.dirname(original_method_file)
+                    )
+                    # shutil.copy(method.file_path, original_file_location)
+                    # method.file_path = original_file_location
             except Exception as e:
                 traceback_str = traceback.format_exc()
                 logger.error(f"An error occurred: {e}\n{traceback_str}")
+                llm_prompt.save_prompt(prompt_path)
+                prompt_length = llm_prompt.get_prompt_length(
+                    config["Model_parameters"]["Encoding"]
+                )
+                error_path = f"{method.file_path}_{index}_{i}_error"
+                with open(error_path, "w") as f:
+                    f.write(f"{e}\n{traceback_str}")
+                store_results(
+                    index,
+                    method,
+                    new_method,
+                    original_file_location,
+                    prompt_path,
+                    prompt_length,
+                    prompt_index,
+                    config_prompt["Prompt_name"],
+                    error_path,
+                    feedback,
+                    i,
+                    diff,
+                    notebook_url,
+                    csv_writer,
+                )
+
+        method.move_to_results_directory(os.path.dirname(original_file_location))
+        if new_method is not None:
+            new_method.move_to_results_directory(config["Results_dir"])
         return (
             new_method,
             prompt_path,
@@ -311,6 +427,92 @@ def cleanup_environment(tmp_original_file_location, original_file_path):
     shutil.copy(tmp_original_file_location, original_file_path)
 
 
+def store_results(
+    method_index,
+    method,
+    new_method,
+    original_file,
+    prompt_path,
+    prompt_length,
+    prompt_index,
+    prompt_name,
+    error_message_file,
+    feedback,
+    try_number,
+    diff,
+    notebook_url,
+    csv_writer,
+):
+    fix_stats = [
+        method_index,
+        original_file,
+    ]
+
+    try:
+        fix_stats.extend(
+            [
+                method.method_name,
+                method.verification_time,
+                method.verification_result,
+                method.dafny_log_file,
+                method.error_message,
+                method.error_file_path,
+            ]
+        )
+    except AttributeError:
+        fix_stats.extend(
+            [
+                "default_method_name",
+                "default_verification_time",
+                "Exception",
+                "default_dafny_log_file",
+                "default_error_message",
+                "default_error_file_path",
+            ]
+        )
+
+    try:
+        fix_stats.extend(
+            [
+                new_method.file_path,
+                new_method.method_name,
+                new_method.verification_time,
+                new_method.verification_result,
+                new_method.dafny_log_file,
+                new_method.error_message,
+                new_method.error_file_path,
+            ]
+        )
+    except (AttributeError, NameError):
+        fix_stats.extend(
+            [
+                "default_file_path",
+                "default_method_name",
+                "default_verification_time",
+                "default_verification_result",
+                "default_dafny_log_file",
+                "default_error_message",
+                "default_error_file_path",
+            ]
+        )
+
+    fix_stats.extend(
+        [
+            prompt_path,
+            prompt_length,
+            prompt_index,
+            prompt_name,
+            error_message_file,
+            feedback,
+            try_number,
+            diff if len(diff) > 5 else "",
+            notebook_url,
+        ]
+    )
+    if csv_writer:
+        csv_writer.writerow(fix_stats)
+
+
 def store_results_and_compare(
     method_index,
     method,
@@ -327,29 +529,4 @@ def store_results_and_compare(
 ):
     comparison_result, comparison_details = method.compare(new_method)
     logger.info(comparison_details)
-    fix_stats = [
-        method_index,
-        original_file,
-        method.method_name,
-        method.verification_time,
-        method.verification_result,
-        method.dafny_log_file,
-        method.error_message,
-        method.error_file_path,
-        new_method.file_path,
-        new_method.method_name,
-        new_method.verification_time,
-        new_method.verification_result,
-        new_method.dafny_log_file,
-        new_method.error_message,
-        new_method.error_file_path,
-        prompt_path,
-        prompt_length,
-        prompt_index,
-        prompt_name,
-        diff if len(diff) > 5 else "",
-        notebook_url,
-    ]
-    if csv_writer:
-        csv_writer.writerow(fix_stats)
     return comparison_result

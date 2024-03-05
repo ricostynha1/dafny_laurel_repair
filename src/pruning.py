@@ -155,7 +155,7 @@ def process_assertion(
             assertion, "", 1
         )
         new_method = method.create_modified_method(
-            modified_method, file_location, method_index, "prunned"
+            modified_method, file_location, method_index, 0, "prunned"
         )
         logger.info(
             f"Creating modified method for {method.method_name} in {new_method.file_path}"

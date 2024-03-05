@@ -1,0 +1,12 @@
+'NoneType' object has no attribute 'splitlines'
+Traceback (most recent call last):
+  File "/exp/dafny_repair/./src/generating_llm_fix.py", line 236, in process_method
+    new_method, diff = test_prompt(
+                       ^^^^^^^^^^^^
+  File "/exp/dafny_repair/./src/generating_llm_fix.py", line 192, in test_prompt
+    new_method_content = get_new_method_content(
+                         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/exp/dafny_repair/./src/generating_llm_fix.py", line 421, in get_new_method_content
+    line.lstrip("+") for line in new_method_content.splitlines()
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'splitlines'
