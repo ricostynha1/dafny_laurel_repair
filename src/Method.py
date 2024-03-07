@@ -130,11 +130,13 @@ class Method:
                 " ".join(dafny_command),
                 check=True,
                 capture_output=True,
+                timeout=400,
                 text=True,
                 shell=True,
                 executable="/usr/bin/zsh",
             )
             logger.debug(result.stdout)
+        # TODO Catch timeouts
         except subprocess.CalledProcessError as e:
             if e.stderr:
                 logger.error(e.stderr)
