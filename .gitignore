@@ -167,3 +167,8 @@ results_llm/
 
 .python-version
 .vscode/
+
+# CSharp
+build/
+obj/
+bin/
