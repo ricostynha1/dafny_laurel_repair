@@ -1,5 +1,6 @@
 import logging
 import os
+import traceback
 import yaml
 from Method import Method
 
@@ -35,4 +36,5 @@ def parse_config_llm(config_file):
 
             return methods_list, config_data
         except yaml.YAMLError as exc:
-            logger.error(exc)
+            traceback_str = traceback.format_exc()
+            logger.error(f"{exc}\n{traceback_str}")

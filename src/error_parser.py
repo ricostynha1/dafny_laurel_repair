@@ -2,7 +2,7 @@ import re
 
 from utils import extract_line_from_file_content
 
-assertion_placeholder = "<assertion> Insert assertion here </assertion>\n"
+assertion_placeholder = "\n<assertion> Insert assertion here </assertion>\n"
 
 
 ## Take a dafny error message
