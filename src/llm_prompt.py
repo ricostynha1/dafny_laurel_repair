@@ -4,7 +4,7 @@ import openai
 import os
 import tiktoken
 from dafny_utils import extract_dafny_functions
-from guidance import system, user, assistant, models, gen
+from guidance import system, user, assistant, models
 
 from error_parser import insert_assertion_location
 
@@ -104,6 +104,7 @@ class Llm_prompt:
         with user():
             self.chat += question
         self.messages.append({"role": "user", "content": question})
+        return method_with_placeholder
 
     def feedback_error_message(self, error_message):
         error_feedback = (
@@ -131,10 +132,37 @@ class Llm_prompt:
         return fix
 
     def generate_fix(self, model_parameters):
-        with assistant():
-            self.chat += gen(
-                "response",
-                max_tokens=model_parameters["Max_tokens"],
-                temperature=model_parameters["Temperature"],
-            )
-        return self.chat["response"]
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "insert_dafny_assertion",
+                    "description": "Use this function to insert a Dafny assertion into a predefined placeholder.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "assertion": {
+                                "type": "string",
+                                "description": "The Dafny assertion to insert into the placeholder.",
+                            }
+                        },
+                        "required": ["assertion"],
+                    },
+                },
+            }
+        ]
+        response = openai.chat.completions.create(
+            model=model_parameters["Model"],
+            temperature=model_parameters["Temperature"],
+            max_tokens=model_parameters["Max_tokens"],
+            messages=self.messages,
+            tools=tools,
+            tool_choice={
+                "type": "function",
+                "function": {"name": "insert_dafny_assertion"},
+            },
+        )
+
+        return json.loads(response.choices[0].message.tool_calls[0].function.arguments)[
+            "assertion"
+        ]

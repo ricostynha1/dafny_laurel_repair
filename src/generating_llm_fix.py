@@ -181,17 +181,28 @@ def handle_no_pruning_results(config_file):
     return success_count, method_processed
 
 
-def test_prompt(llm_prompt, prompt_path, config, method, index, try_nb):
+def test_prompt(
+    llm_prompt, prompt_path, config, method, index, try_nb, method_with_placeholder
+):
     logger.info(f"{method.method_name} ===> Try {try_nb+1}")
     response = llm_prompt.get_fix(
         config["Model_parameters"],
     )
+    # TODO this is going to be an assertion
     fix_prompt = response
+    print(f"Fix prompt: {fix_prompt}")
     logger.info(fix_prompt)
-    code = extract_string_between_backticks(fix_prompt)
-    new_method_content = get_new_method_content(
-        code if code else fix_prompt, method.method_name
-    )
+    # TODO insert the assertion
+    if "\n" not in fix_prompt:
+        new_method_content = method_with_placeholder.replace(
+            "<assertion> Insert assertion here </assertion>", fix_prompt
+        )
+        print(new_method_content)
+    else:
+        code = extract_string_between_backticks(fix_prompt)
+        new_method_content = get_new_method_content(
+            code if code else fix_prompt, method.method_name
+        )
     diff = method.get_diff(new_method_content)
     new_method = method.create_modified_method(
         new_method_content, os.path.dirname(method.file_path), index, try_nb, "fix"
@@ -224,7 +235,7 @@ def process_method(
                     config_prompt["System_prompt"], config_prompt["Context"]
                 )
                 prompt_path = f"{method.file_path}_{index}_{i}_prompt"
-                llm_prompt.add_question(
+                method_with_placeholder = llm_prompt.add_question(
                     method.file_path,
                     method.method_name,
                     method.entire_error_message,
@@ -234,7 +245,13 @@ def process_method(
                     method.entire_error_message if config_prompt["Feedback"] else None,
                 )
                 new_method, diff = test_prompt(
-                    llm_prompt, prompt_path, config, method, index, i
+                    llm_prompt,
+                    prompt_path,
+                    config,
+                    method,
+                    index,
+                    i,
+                    method_with_placeholder,
                 )
                 llm_prompt.save_prompt(prompt_path)
                 prompt_length = llm_prompt.get_prompt_length(
