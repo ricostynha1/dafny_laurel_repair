@@ -16,6 +16,9 @@ matplotlib = "^3.8.1"
 tiktoken = "^0.5.2"
 guidance = "^0.1.10"
 gspread = "^6.0.2"
+multiprocess = "^0.70.16"
+numpy = "^1.26.4"
+scipy = "^1.12.0"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -18,6 +18,7 @@ from utils import (
     read_pruning_result,
     write_csv_header_arg,
 )
+from select_example import ExamplesSelector
 
 logger = logging.getLogger(__name__)
 
@@ -76,12 +77,13 @@ def handle_pruning_results(config_file, pruning_file):
         "Url",
     ]
     csv_writer, file = write_csv_header_arg(config["Results_file"], header)
+    examples_selectors = []
+    for config_prompt in config["Prompts"]:
+        examples_selectors.append(ExamplesSelector(config_prompt))
     for row in pruning_results:
         # if method_processed != 7:
         #     method_processed += 1
         #     continue
-        # pass
-        # break
         (
             method,
             tmp_original_file_location,
@@ -107,6 +109,7 @@ def handle_pruning_results(config_file, pruning_file):
                 original_method_file,
                 csv_writer,
                 notebook_url,
+                examples_selectors,
             )
             success_count += (
                 1
@@ -221,6 +224,7 @@ def process_method(
     original_method_file,
     csv_writer,
     notebook_url,
+    examples_selectors,
 ):
     logger.info("+--------------------------------------+")
     method.run_verification(config["Results_dir"], config.get("Dafny_args", ""))
@@ -232,7 +236,9 @@ def process_method(
             feedback = False
             try:
                 llm_prompt = Llm_prompt(
-                    config_prompt["System_prompt"], config_prompt["Context"]
+                    config_prompt["System_prompt"],
+                    config_prompt["Context"],
+                    examples_selectors[prompt_index - 1],
                 )
                 prompt_path = f"{method.file_path}_{index}_{i}_prompt"
                 method_with_placeholder = llm_prompt.add_question(

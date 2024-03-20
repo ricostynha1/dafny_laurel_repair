@@ -17,10 +17,11 @@ Prompts:
       Your task is to insert an assertion in the <assertion> placeholder to make it verify."
     Fix_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
     Method_context: "None"
-    Feedback: True
+    Feedback: False
     Nb_tries: 4
-    Error_feedback: True
-    Prompt_name: "error_n_feedback"
+    Error_feedback: False
+    Prompt_name: "placeholder"
+    Type: "Provided"
 
 Model_parameters:
   Temperature: 1
@@ -29,4 +30,4 @@ Model_parameters:
   Prompt_limit: 8192
   Encoding: "cl100k_base"
 Dafny_args: "--library /exp/test_projects/Dafny-VMC/src/**/*.dfy --resource-limit 20000"
-Results_file: ./results_llm/stats_llm_DafnyVMC_sample10_context.csv
+Results_file: ./results_llm/stats_llm_DafnyVMC_sample10_placeholder_4t.csv

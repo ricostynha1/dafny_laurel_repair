@@ -17,10 +17,11 @@ Prompts:
       Your task is to insert an assertion in the <assertion> placeholder to make it verify."
     Fix_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
     Method_context: "None"
-    Error_feedback: True
-    Feedback: True
-    Nb_tries: 10
-    Prompt_name: "error_n_feedback"
+    Feedback: False
+    Error_feedback: False
+    Nb_tries: 4
+    Prompt_name: "placeholder"
+    Type: "Provided"
 
 Model_parameters:
   Temperature: 1
@@ -29,4 +30,4 @@ Model_parameters:
   Prompt_limit: 8192
   Encoding: "cl100k_base"
 Dafny_args: "--verification-time-limit:300"
-Results_file: ./results_llm/stats_llm_cedar_sample10_context.csv
+Results_file: ./results_llm/stats_llm_cedar_sample10_placeholder_4t.csv

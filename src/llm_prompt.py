@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class Llm_prompt:
-    def __init__(self, system_prompt, context):
+    def __init__(self, system_prompt, context, example_selector):
         model = models.OpenAI("gpt-4", echo=False)
         messages = []
         chat = model
@@ -22,27 +22,15 @@ class Llm_prompt:
             with system():
                 messages.append({"role": "system", "content": system_prompt})
                 chat += system_prompt
-        for examples in context:
-            with open(examples["File_to_fix"], "r") as f:
-                # remove the last line since it is the code url
-                # TODO clean that
-                code_to_fix = "\n".join(f.read().split("\n")[:-1])
-            user_content = (
-                f"{examples['Question_prompt']}\n<method>\n{code_to_fix}\n</method>"
-            )
+        if example_selector is not None:
+            for example in example_selector.examples:
+                with user():
+                    chat += example["Question"]
+                with assistant():
+                    chat += example["Answer"]
+                messages.append({"role": "user", "content": example["Question"]})
+                messages.append({"role": "assistant", "content": example["Answer"]})
 
-            with open(examples["Fix"], "r") as f:
-                # remove the last line since it is the code url
-                # TODO clean that
-                fix = "\n".join(f.read().split("\n")[:-1])
-            assistant_content = f"{examples['Answer_prompt']} {fix}"
-
-            with user():
-                chat += user_content
-            with assistant():
-                chat += assistant_content
-            messages.append({"role": "user", "content": user_content})
-            messages.append({"role": "assistant", "content": assistant_content})
         self.chat = chat
         self.messages = messages
 
