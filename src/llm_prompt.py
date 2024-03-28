@@ -1,28 +1,30 @@
 import logging
 import json
 import openai
-import os
 import tiktoken
+import yaml
 from dafny_utils import extract_dafny_functions
 from guidance import system, user, assistant, models
 
 from error_parser import insert_assertion_location
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
 
 logger = logging.getLogger(__name__)
 
 
 class Llm_prompt:
-    def __init__(self, system_prompt, context, example_selector):
-        model = models.OpenAI("gpt-4", echo=False)
+    def __init__(self, system_prompt, example_selector):
+        with open("secrets.yaml", "r") as f:
+            secrets = yaml.safe_load(f)
+        openai.api_key = secrets["OPENAI_API_KEY"]
+        model = models.OpenAI("gpt-4", echo=False, api_key=secrets["OPENAI_API_KEY"])
         messages = []
         chat = model
         if system_prompt:
             with system():
                 messages.append({"role": "system", "content": system_prompt})
                 chat += system_prompt
-        if example_selector is not None:
+        if example_selector is not None and example_selector.nature != "Dynamic":
             for example in example_selector.examples:
                 with user():
                     chat += example["Question"]
@@ -43,10 +45,25 @@ class Llm_prompt:
         model_parameters,
         context_option,
         feedback,
+        example_selector,
+        threshold,
+        placeholder,
     ):
         with open(program_to_fix, "r") as f:
             content = f.read()
         method = extract_dafny_functions(content, method_name)
+        examples = []
+        if example_selector.nature == "Dynamic":
+            examples = example_selector.generate_dynamic_examples(
+                method, threshold, fix_prompt
+            )
+        for example in examples:
+            with user():
+                self.chat += example["Question"]
+            with assistant():
+                self.chat += example["Answer"]
+            self.messages.append({"role": "user", "content": example["Question"]})
+            self.messages.append({"role": "assistant", "content": example["Answer"]})
         # Everything but the method
         context = content.replace(method, "")
 
@@ -57,10 +74,10 @@ class Llm_prompt:
         num_tokens_fix_prompt = len(encoding.encode(fix_prompt))
         current_prompt_length += num_tokens_method + num_tokens_fix_prompt
         # depending on feedback included add the feedback
-        method_with_placeholder = insert_assertion_location(
-            error_message, method, content
-        )
-        question = f"{fix_prompt}\n <method> {method_with_placeholder} </method>"
+        method_to_insert = method
+        if placeholder:
+            method_to_insert = insert_assertion_location(error_message, method, content)
+        question = f"{fix_prompt}\n <method> {method_to_insert} </method>"
         if feedback:
             num_tokens_feedback = len(encoding.encode(feedback))
             current_prompt_length += num_tokens_feedback
@@ -92,7 +109,7 @@ class Llm_prompt:
         with user():
             self.chat += question
         self.messages.append({"role": "user", "content": question})
-        return method_with_placeholder
+        return method_to_insert
 
     def feedback_error_message(self, error_message):
         error_feedback = (

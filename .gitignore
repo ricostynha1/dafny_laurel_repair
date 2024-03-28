@@ -172,3 +172,7 @@ results_llm/
 build/
 obj/
 bin/
+.mono
+*.sln
+
+secrets.yaml

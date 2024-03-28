@@ -20,6 +20,7 @@ def parse_arguments():
     llm_parser = subparsers.add_parser("llm", help="Use llm mode")
     llm_parser.add_argument("config_file", help="Config to run the llm gen")
     llm_parser.add_argument("--pruning_results", "-p", help="CSV pruning results file")
+    llm_parser.add_argument("--output_file", "-o", help="Output_result_file")
 
     prune_assert_parser = subparsers.add_parser(
         "prune-assert", help="Prune-assert mode"
@@ -41,7 +42,13 @@ if __name__ == "__main__":
         remove_assertions(args.config_file)
     elif args.mode == "llm":
         logger.info("==== Starting the llm fix ====")
-        if args.pruning_results:
+        if args.pruning_results and args.output_file:
+            generate_fix_llm(
+                args.config_file,
+                pruning_file=args.pruning_results,
+                output_file=args.output_file,
+            )
+        elif args.pruning_results:
             methods = []
             generate_fix_llm(
                 args.config_file,

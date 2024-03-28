@@ -25,8 +25,12 @@ logger = logging.getLogger(__name__)
 SERVER_NAME = "http://c10-09.sysnet.ucsd.edu:8866/"
 
 
-def generate_fix_llm(config_file, pruning_file=None):
-    if pruning_file:
+def generate_fix_llm(config_file, pruning_file=None, output_file=None):
+    if pruning_file and output_file:
+        return handle_pruning_results(
+            config_file, pruning_file, output_file=output_file
+        )
+    elif pruning_file:
         return handle_pruning_results(config_file, pruning_file)
     else:
         return handle_no_pruning_results(config_file)
@@ -45,7 +49,7 @@ def generate_notebook_url(result_file, assertion_file, method_index):
     return full_url
 
 
-def handle_pruning_results(config_file, pruning_file):
+def handle_pruning_results(config_file, pruning_file, output_file=None):
     pruning_results = read_pruning_result(pruning_file)
     _, config = parse_config_llm(config_file)
     method_processed, success_count = 0, 0
@@ -76,14 +80,17 @@ def handle_pruning_results(config_file, pruning_file):
         "Diff",
         "Url",
     ]
-    csv_writer, file = write_csv_header_arg(config["Results_file"], header)
+    csv_writer, file = write_csv_header_arg(
+        output_file if output_file is not None else config["Results_file"], header
+    )
     examples_selectors = []
     for config_prompt in config["Prompts"]:
         examples_selectors.append(ExamplesSelector(config_prompt))
     for row in pruning_results:
-        # if method_processed != 7:
+        # if method_processed != 7 and method_processed != 8:
         #     method_processed += 1
         #     continue
+        print(f"Method processed: {method_processed}")
         (
             method,
             tmp_original_file_location,
@@ -91,7 +98,9 @@ def handle_pruning_results(config_file, pruning_file):
         ) = setup_verification_environment(config, row, method_processed)
         try:
             notebook_url = generate_notebook_url(
-                config["Results_file"], pruning_file, method_processed
+                output_file if output_file is not None else config["Results_file"],
+                pruning_file,
+                method_processed,
             )
             (
                 new_method,
@@ -137,7 +146,9 @@ def handle_pruning_results(config_file, pruning_file):
         method_processed += 1
 
     file.close()
-    upload_results(config_file, config["Results_file"])
+    upload_results(
+        config_file, output_file if output_file is not None else config["Results_file"]
+    )
     return success_count, method_processed
 
 
@@ -234,13 +245,20 @@ def process_method(
     for prompt_index, config_prompt in enumerate(config["Prompts"], start=1):
         for i in range(config_prompt["Nb_tries"]):
             feedback = False
+
+            threshold = 0
+            if (
+                config_prompt["Context"] is not None
+                and "Threshold" in config_prompt["Context"]
+            ):
+                threshold = config_prompt["Context"]["Threshold"]
+
             try:
                 llm_prompt = Llm_prompt(
                     config_prompt["System_prompt"],
-                    config_prompt["Context"],
                     examples_selectors[prompt_index - 1],
                 )
-                prompt_path = f"{method.file_path}_{index}_{i}_prompt"
+                prompt_path = f"{method.file_path}_{index}_{i}_{config_prompt['Prompt_name']}_prompt"
                 method_with_placeholder = llm_prompt.add_question(
                     method.file_path,
                     method.method_name,
@@ -249,6 +267,9 @@ def process_method(
                     config["Model_parameters"],
                     config_prompt["Method_context"],
                     method.entire_error_message if config_prompt["Feedback"] else None,
+                    examples_selectors[prompt_index - 1],
+                    threshold,
+                    config_prompt["Placeholder"],
                 )
                 new_method, diff = test_prompt(
                     llm_prompt,
@@ -375,6 +396,24 @@ def process_method(
                     )
                     # shutil.copy(method.file_path, original_file_location)
                     # method.file_path = original_file_location
+                else:
+                    store_results(
+                        index,
+                        method,
+                        new_method,
+                        original_file_location,
+                        prompt_path,
+                        prompt_length,
+                        prompt_index,
+                        config_prompt["Prompt_name"],
+                        "",
+                        feedback,
+                        i,
+                        diff,
+                        notebook_url,
+                        csv_writer,
+                    )
+
             except Exception as e:
                 traceback_str = traceback.format_exc()
                 logger.error(f"An error occurred: {e}\n{traceback_str}")

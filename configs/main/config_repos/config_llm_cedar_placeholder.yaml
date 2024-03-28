@@ -1,0 +1,26 @@
+Results_dir: ./results_llm
+Prompts:
+  - Context:
+    System_prompt: |
+      "You are a Dafny formal method expert.
+      You will be provided with a Dafny method indicated by the delimiter <method>
+      that does not verify because of an error indicated in between <error> tagsalong
+      along with its dependencies with the delimiter <dependencies>.
+      Your task is to insert an assertion in the <assertion> placeholder to make it verify."
+    Fix_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
+    Method_context: "None"
+    Feedback: False
+    Error_feedback: False
+    Nb_tries: 4
+    Prompt_name: "Placeholder"
+    Type: "Provided"
+    Placeholder: True
+
+Model_parameters:
+  Temperature: 1
+  Model: gpt-4
+  Max_tokens: 2048
+  Prompt_limit: 8192
+  Encoding: "cl100k_base"
+Dafny_args: "--verification-time-limit:300"
+Results_file: ./results_llm/stats_llm_cedar_sample10_placeholder_4t.csv

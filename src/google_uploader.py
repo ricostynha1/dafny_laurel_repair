@@ -1,13 +1,15 @@
 import csv
 from datetime import datetime
 import gspread
-import os
+import yaml
 
 SPREADSHEET_NAME = "results_dafny_repair"
 
 
 def upload_results(project_name, csv_file):
-    gc = gspread.service_account(filename=os.getenv("GOOGLE_OAUTH_JSON"))
+    with open("secrets.yaml", "r") as f:
+        secrets = yaml.safe_load(f)
+    gc = gspread.service_account(filename=secrets["GOOGLE_OAUTH_JSON"])
 
     spreadsheet = gc.open(SPREADSHEET_NAME)
 
