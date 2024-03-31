@@ -7,6 +7,7 @@ from dafny_utils import extract_dafny_functions
 from guidance import system, user, assistant, models
 
 from error_parser import insert_assertion_location
+from utils import string_difference
 
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,22 @@ class Llm_prompt:
         self.chat = chat
         self.messages = messages
 
+    def remove_answer(self, method_content, method_name):
+        messages_copy = self.messages.copy()
+        for i, message in enumerate(messages_copy):
+            if message["role"] == "user":
+                extracted_method = extract_dafny_functions(
+                    message["content"], method_name
+                )
+                if extracted_method is not None:
+                    diff = string_difference(method_content, extracted_method)
+                    diff = diff.replace(
+                        "<assertion> Insert the assertion here </assertion>\n", ""
+                    )
+                    self.messages[i]["content"] = self.messages[i]["content"].replace(
+                        diff, ""
+                    )
+
     def add_question(
         self,
         program_to_fix,
@@ -55,7 +72,7 @@ class Llm_prompt:
         examples = []
         if example_selector.nature == "Dynamic":
             examples = example_selector.generate_dynamic_examples(
-                method, threshold, fix_prompt
+                method, threshold, fix_prompt, program_to_fix
             )
         for example in examples:
             with user():
@@ -65,6 +82,7 @@ class Llm_prompt:
             self.messages.append({"role": "user", "content": example["Question"]})
             self.messages.append({"role": "assistant", "content": example["Answer"]})
         # Everything but the method
+        self.remove_answer(method, method_name)
         context = content.replace(method, "")
 
         # current size =

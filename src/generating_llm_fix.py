@@ -87,7 +87,7 @@ def handle_pruning_results(config_file, pruning_file, output_file=None):
     for config_prompt in config["Prompts"]:
         examples_selectors.append(ExamplesSelector(config_prompt))
     for row in pruning_results:
-        # if method_processed != 7 and method_processed != 8:
+        # if method_processed != 3:
         #     method_processed += 1
         #     continue
         print(f"Method processed: {method_processed}")
@@ -332,7 +332,13 @@ def process_method(
 
                     llm_prompt.feedback_error_message(new_error)
                     new_method, diff = test_prompt(
-                        llm_prompt, prompt_path, config, method, index, i
+                        llm_prompt,
+                        prompt_path,
+                        config,
+                        method,
+                        index,
+                        i,
+                        method_with_placeholder,
                     )
                     llm_prompt.save_prompt(prompt_path)
                     prompt_length = llm_prompt.get_prompt_length(
