@@ -2,22 +2,21 @@ Results_dir: ./results_llm
 Prompts:
   - Context:
       Question_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
-      Threshold: 0.7
-      Min_cluster_length: 6
+      Threshold: 8
       Training_file: ./results/training_libraries.csv
+      Max_size: 6
     System_prompt: |
       "You are a Dafny formal method expert.
       You will be provided with a Dafny method indicated by the delimiter <method>
-      that does not verify because of an error indicated in between <error> tagsalong
-      along with its dependencies with the delimiter <dependencies>.
+      that does not verify because of an error indicated in between <error> tags.
       Your task is to insert an assertion in the <assertion> placeholder to make it verify."
     Fix_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
     Method_context: "None"
     Feedback: False
-    Error_feedback: False
-    Nb_tries: 10
-    Prompt_name: "static"
-    Type: "Static"
+    Error_feedback: True
+    Nb_tries: 6
+    Prompt_name: "dynamicError"
+    Type: "Dynamic"
     Placeholder: True
 
 Model_parameters:

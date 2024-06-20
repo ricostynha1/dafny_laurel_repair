@@ -2,9 +2,8 @@ Results_dir: ./results_llm
 Prompts:
   - Context:
       Question_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
-      Threshold: 0.7
-      Min_cluster_length: 6
       Training_file: ./results/training_libraries.csv
+      Max_size: 6
     System_prompt: |
       "You are a Dafny formal method expert.
       You will be provided with a Dafny method indicated by the delimiter <method>
@@ -16,8 +15,8 @@ Prompts:
     Feedback: False
     Error_feedback: False
     Nb_tries: 10
-    Prompt_name: "static"
-    Type: "Static"
+    Prompt_name: "Placeholder"
+    Type: "FileProvided"
     Placeholder: True
 
 Model_parameters:
@@ -26,5 +25,5 @@ Model_parameters:
   Max_tokens: 2048
   Prompt_limit: 8192
   Encoding: "cl100k_base"
-Dafny_args: "--use-basename-for-filename --cores:2 --verification-time-limit:300 --disable-nonlinear-arithmetic"
-Results_file: ./results_llm/stats_llm_libraries_sample20_placeholder.csv
+Dafny_args: "--verification-time-limit:300"
+Results_file: ./results_llm/stats_llm_cedar_sample10_placeholder_4t.csv

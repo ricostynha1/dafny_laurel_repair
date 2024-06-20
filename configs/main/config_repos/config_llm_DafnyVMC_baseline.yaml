@@ -10,7 +10,7 @@ Prompts:
     Fix_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
     Method_context: "None"
     Feedback: False
-    Nb_tries: 4
+    Nb_tries: 10
     Error_feedback: False
     Prompt_name: "baseline"
     Type: "Provided"

@@ -11,7 +11,7 @@ Prompts:
     Method_context: "None"
     Feedback: False
     Error_feedback: False
-    Nb_tries: 4
+    Nb_tries: 10
     Prompt_name: "baseline"
     Type: "Provided"
     Placeholder: False

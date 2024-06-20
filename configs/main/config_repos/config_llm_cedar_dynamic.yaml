@@ -2,7 +2,7 @@ Results_dir: ./results_llm
 Prompts:
   - Context:
       Question_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
-      Threshold: 10
+      Threshold: 6
       Min_cluster_length: 1
       Training_file: ./results/training_cedar.csv
       Max_size: 6
@@ -16,7 +16,7 @@ Prompts:
     Method_context: "None"
     Feedback: False
     Error_feedback: False
-    Nb_tries: 4
+    Nb_tries: 10
     Prompt_name: "dynamic"
     Type: "Dynamic"
     Placeholder: True

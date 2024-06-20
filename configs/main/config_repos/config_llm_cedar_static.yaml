@@ -4,7 +4,7 @@ Prompts:
       Question_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
       Threshold: 0.3
       Min_cluster_length: 3
-      Training_file: ./results/training_cedar.csv
+      Training_file: ./results/training_cedar.cs
     System_prompt: |
       "You are a Dafny formal method expert.
       You will be provided with a Dafny method indicated by the delimiter <method>
@@ -15,7 +15,7 @@ Prompts:
     Method_context: "None"
     Feedback: False
     Error_feedback: False
-    Nb_tries: 4
+    Nb_tries: 10
     Prompt_name: "static"
     Type: "Static"
     Placeholder: True

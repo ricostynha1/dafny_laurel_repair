@@ -1,10 +1,14 @@
 Results_dir: ./results_llm
 Prompts:
   - Context:
+    - File_to_fix: ./prompts/4586789e1af32732224d7b7c31ccb55035ffac04.dfy
+      Fix: ./prompts/4586789e1af32732224d7b7c31ccb55035ffac04_fix.dfy
       Question_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
-      Threshold: 0.7
-      Min_cluster_length: 6
-      Training_file: ./results/training_libraries.csv
+      Answer_prompt: ""
+    - File_to_fix: ./prompts/LemmaMaxOfConcat.dfy
+      Fix: ./prompts/LemmaMaxOfConcat_fix.dfy
+      Question_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
+      Answer_prompt: ""
     System_prompt: |
       "You are a Dafny formal method expert.
       You will be provided with a Dafny method indicated by the delimiter <method>
@@ -15,9 +19,9 @@ Prompts:
     Method_context: "None"
     Feedback: False
     Error_feedback: False
-    Nb_tries: 10
-    Prompt_name: "static"
-    Type: "Static"
+    Nb_tries: 6
+    Prompt_name: "Placeholder"
+    Type: "Provided"
     Placeholder: True
 
 Model_parameters:

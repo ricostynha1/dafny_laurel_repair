@@ -13,3 +13,5 @@ run_vmc:
 	poetry run python src/test_harness.py llm configs/config_llm_DafnyVMC_sample10.yaml  -p results/non_verified_dafnyVMC_sample_10.csv
 test:
 	 poetry run python -m unittest discover -s ./tests_package
+exp:
+	 python src/exp_launcher.py ./configs/main/exp.yaml
