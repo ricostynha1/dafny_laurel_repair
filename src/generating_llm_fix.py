@@ -10,7 +10,6 @@ from dafny_utils import (
     extract_dafny_functions,
 )
 from error_parser import remove_warning
-from google_uploader import upload_results
 from llm_prompt import Llm_prompt
 from Method import Method
 from utils import (
@@ -25,8 +24,17 @@ logger = logging.getLogger(__name__)
 SERVER_NAME = "http://c10-09.sysnet.ucsd.edu:8866/"
 
 
-def generate_fix_llm(config_file, pruning_file=None, output_file=None):
-    if pruning_file and output_file:
+def generate_fix_llm(
+    config_file, pruning_file=None, output_file=None, training_file=None
+):
+    if training_file and pruning_file and output_file:
+        return handle_pruning_results(
+            config_file,
+            pruning_file,
+            output_file=output_file,
+            training_file=training_file,
+        )
+    elif pruning_file and output_file:
         return handle_pruning_results(
             config_file, pruning_file, output_file=output_file
         )
@@ -49,7 +57,9 @@ def generate_notebook_url(result_file, assertion_file, method_index):
     return full_url
 
 
-def handle_pruning_results(config_file, pruning_file, output_file=None):
+def handle_pruning_results(
+    config_file, pruning_file, output_file=None, training_file=None
+):
     pruning_results = read_pruning_result(pruning_file)
     _, config = parse_config_llm(config_file)
     method_processed, success_count = 0, 0
@@ -85,12 +95,16 @@ def handle_pruning_results(config_file, pruning_file, output_file=None):
     )
     examples_selectors = []
     for config_prompt in config["Prompts"]:
+        if training_file is not None:
+            print(f"Training file: {training_file}")
+            if isinstance(config_prompt["Context"], dict):
+                config_prompt["Context"]["Training_file"] = training_file
         examples_selectors.append(ExamplesSelector(config_prompt))
     for row in pruning_results:
-        # if method_processed != 3:
+        # if method_processed != 10:
         #     method_processed += 1
         #     continue
-        print(f"Method processed: {method_processed}")
+        print(f"Method processed: {method_processed}/{len(pruning_results)}")
         (
             method,
             tmp_original_file_location,
@@ -146,9 +160,9 @@ def handle_pruning_results(config_file, pruning_file, output_file=None):
         method_processed += 1
 
     file.close()
-    upload_results(
-        config_file, output_file if output_file is not None else config["Results_file"]
-    )
+    # upload_results(
+    #     config_file, output_file if output_file is not None else config["Results_file"]
+    # )
     return success_count, method_processed
 
 

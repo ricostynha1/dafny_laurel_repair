@@ -11,6 +11,7 @@ import sys
 
 sys.path.append("/exp/code_clustering/codexploration")
 from corexploration.models.mss import mss
+from get_distance_matrix import compute_clustering_unsave
 
 
 class ExamplesSelector:
@@ -25,6 +26,22 @@ class ExamplesSelector:
             self.examples = self.init_provided_examples(config_prompt)
             self.mspc = None
             self.nature = "Provided"
+        if config_prompt["Type"] == "FileProvided":
+            self.examples = self.init_file_provided_examples(config_prompt)
+            self.nature = "FileProvided"
+
+    def init_file_provided_examples(self, config_prompt):
+        training_file = config_prompt["Context"]["Training_file"]
+        question_prompt = config_prompt["Context"]["Question_prompt"]
+
+        self.tokens_df = pd.read_csv(training_file)
+        selected_rows = self.tokens_df.sample(config_prompt["Context"]["Max_size"])
+        self.tokens_df = selected_rows
+        examples = []
+        for index, row in selected_rows.iterrows():
+            question, assertion = self.build_example(index, question_prompt)
+            examples.append({"Question": question, "Answer": assertion})
+        return examples
 
     def init_provided_examples(self, config_prompt):
         examples = []
@@ -55,9 +72,11 @@ class ExamplesSelector:
         question_prompt = config_prompt["Context"]["Question_prompt"]
 
         self.tokens_df, recompute = get_tokens_df(training_file)
-        assertion_tokens = (
-            self.tokens_df["Assertion Tokens"].apply(ast.literal_eval).to_list()
-        )
+        assertion_tokens = self.tokens_df["Assertion Tokens"].to_list()
+        if isinstance(self.tokens_df["Assertion Tokens"][0], str):
+            assertion_tokens = (
+                self.tokens_df["Assertion Tokens"].apply(ast.literal_eval).to_list()
+            )
         self.mspc = compute_clustering(assertion_tokens, token_file, force=recompute)
         centers = get_clusters_centers(self.mspc, threshold, min_cluster_length)
         examples = []
@@ -66,15 +85,19 @@ class ExamplesSelector:
             examples.append({"Question": question, "Answer": assertion})
         return examples
 
-    def build_example(self, center, question_prompt):
+    def build_example(self, center, question_prompt, current_file=""):
         if os.path.exists(self.tokens_df["Original File"][center]):
             with open(self.tokens_df["Original File"][center]) as f:
+                original_file_content = f.read()
+        elif current_file != "":
+            with open(current_file) as f:
                 original_file_content = f.read()
         else:
             new_method_path = os.path.join(
                 "/exp/dafny_repair/results/"
                 + os.path.basename(self.tokens_df["New Method File"][center])
             )
+            # the assertion that we are looking for is Missing!
             with open(new_method_path) as f:
                 original_file_content = f.read()
         original_method_content = extract_dafny_functions(
@@ -95,6 +118,7 @@ class ExamplesSelector:
             method_tokens = (
                 self.tokens_df["Method Tokens"].apply(ast.literal_eval).to_list()
             )
+        recompute = False
         self.mspc = compute_clustering(method_tokens, token_file, force=recompute)
 
     def get_clusters_of_method(self, method, threshold):
@@ -107,11 +131,28 @@ class ExamplesSelector:
         self.mspc.remove_row(obj_index)
         return clusters_elements
 
-    def generate_dynamic_examples(self, method, threshold, question_prompt):
+    def generate_dynamic_examples(
+        self, method, threshold, question_prompt, current_file
+    ):
         clusters_elements = self.get_clusters_of_method(method, threshold)
+        if len(clusters_elements) > self.max_size:
+            subset = []
+            new_cluster_elements = []
+            for elements in clusters_elements:
+                subset.append(self.mspc.objs[elements])
+            clusters_subset = compute_clustering_unsave(subset)
+            rep_clust = clusters_subset.top_k_clusters(self.max_size)
+            new_cluster_elements = []
+            for cluster in rep_clust:
+                cl = clusters_subset.centroid(cluster)
+                new_cluster_elements.append(cl)
+            clusters_elements = new_cluster_elements
+
         examples = []
         for elements in clusters_elements:
-            question, assertion = self.build_example(elements, question_prompt)
+            question, assertion = self.build_example(
+                elements, question_prompt, current_file=current_file
+            )
             examples.append({"Question": question, "Answer": assertion})
             if len(examples) >= self.max_size:
                 break
@@ -121,11 +162,11 @@ class ExamplesSelector:
 def get_clusters_centers(mscp, threshold, min_cluster_length):
     clusters = mscp.clusters_by_k(threshold)
 
+    clusters.sort(key=len, reverse=True)
+    clusters = clusters[:min_cluster_length]
+
     centers = []
     for _, cl in enumerate(clusters[::-1]):
-        if len(cl) < min_cluster_length:
-            print(f"Cluster {cl} is too small")
-            continue
         center = mscp.centroid(cl)
         centers.append(center)
     return centers
