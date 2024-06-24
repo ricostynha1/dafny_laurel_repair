@@ -15,9 +15,10 @@ Prompts:
     Method_context: "None"
     Feedback: False
     Error_feedback: False
-    Nb_tries: 5
+    Nb_tries: 1
     Prompt_name: "placeholder"
     Type: "Static"
+    Placeholder: True
 
 Model_parameters:
   Temperature: 1

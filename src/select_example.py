@@ -7,11 +7,9 @@ import pickle
 from token_wrapper import call_tokenizer_csharp, parse_token_output
 from dafny_utils import extract_dafny_functions
 
-import sys
 
-sys.path.append("/exp/code_clustering/codexploration")
-from corexploration.models.mss import mss
-from get_distance_matrix import compute_clustering_unsave
+from similarity.mss import mss
+from similarity.get_distance_matrix import compute_clustering_unsave
 
 
 class ExamplesSelector:
@@ -218,7 +216,13 @@ def comparator(x, y):
 def compute_clustering(suggestions, pickle_file, force=False):
     if os.path.exists(pickle_file) and not force:
         with open(pickle_file, "rb") as f:
-            return pickle.load(f)
+            try:
+                return pickle.load(f)
+            except Exception as e:
+                print(
+                    f"Error loading pickle file, try recomputing the cluster by setting force=True: {e}"
+                )
+                raise
     clustering = mss.HierarchicalClustering(
         suggestions,
         comparator,
