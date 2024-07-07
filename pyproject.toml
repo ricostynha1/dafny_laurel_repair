@@ -1,5 +1,6 @@
 [tool.poetry]
 name = "proof-repair"
+package-mode = false
 version = "0.1.0"
 description = "Tool to automatically fix Dafny proofs"
 authors = ["emugnier <emugnier@ucsd.edu>"]

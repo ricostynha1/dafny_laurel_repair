@@ -1,4 +1,4 @@
 Results_dir: ./results
-Project_path: /exp/test_projects/dafny/Source/DafnyStandardLibraries
+Project_path: /usr/local/home/eric/dafny_repos/dafny/Source/DafnyStandardLibraries
 Dafny_args: "--verification-time-limit 150"
 Stats_file: ./results/stats_pruning_dafnyStd.txt

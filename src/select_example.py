@@ -92,7 +92,8 @@ class ExamplesSelector:
                 original_file_content = f.read()
         else:
             new_method_path = os.path.join(
-                "/exp/dafny_repair/results/"
+                os.getcwd()
+                + "/results/"
                 + os.path.basename(self.tokens_df["New Method File"][center])
             )
             # the assertion that we are looking for is Missing!
@@ -199,7 +200,7 @@ def get_tokens_df(training_file):
         methods_tokens = []
         for _, row in df_non_verified.iterrows():
             new_method_path = os.path.join(
-                "/exp/dafny_repair/results/" + os.path.basename(row["New Method File"])
+                os.getcwd() + "/results/" + os.path.basename(row["New Method File"])
             )
             _, method_tokens = process_method(new_method_path, row["New Method"])
             methods_tokens.append(method_tokens)

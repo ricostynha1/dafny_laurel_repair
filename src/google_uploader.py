@@ -7,7 +7,7 @@ SPREADSHEET_NAME = "results_dafny_repair"
 
 
 def upload_results(project_name, csv_file):
-    with open("secrets.yaml", "r") as f:
+    with open(".secrets.yaml", "r") as f:
         secrets = yaml.safe_load(f)
     gc = gspread.service_account(filename=secrets["GOOGLE_OAUTH_JSON"])
 

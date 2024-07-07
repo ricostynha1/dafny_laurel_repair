@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class Llm_prompt:
     def __init__(self, system_prompt, example_selector):
-        with open("secrets.yaml", "r") as f:
+        with open(".secrets.yaml", "r") as f:
             secrets = yaml.safe_load(f)
         openai.api_key = secrets["OPENAI_API_KEY"]
         model = models.OpenAI("gpt-4", echo=False, api_key=secrets["OPENAI_API_KEY"])
@@ -133,7 +133,7 @@ class Llm_prompt:
         error_feedback = (
             "This is the new error message that we get after the indicated change:\n <error>\n"
             + error_message
-            + "\n <\error>"
+            + "\n <\\error>"
         )
         with user():
             self.chat += error_feedback

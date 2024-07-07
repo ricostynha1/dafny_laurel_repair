@@ -24,5 +24,5 @@ Model_parameters:
 Methods:
   - File_path: ../test_projects/verification_optimization/unital.dfy
     Method_name: UnitIsUnique
-Dafny_args: "--library /exp/test_projects/Dafny-VMC/src/**/*.dfy --resource-limit 20000"
+Dafny_args: "--library /usr/local/home/eric/dafny_repos/Dafny-VMC/src/**/*.dfy --resource-limit 20000"
 Results_file: ./results_llm/stats_llm_DafnyVMC.csv

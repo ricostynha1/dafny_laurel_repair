@@ -176,3 +176,4 @@ bin/
 *.sln
 
 secrets.yaml
+.secrets.yaml

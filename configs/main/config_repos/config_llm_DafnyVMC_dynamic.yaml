@@ -26,5 +26,5 @@ Model_parameters:
   Max_tokens: 2048
   Prompt_limit: 8192
   Encoding: "cl100k_base"
-Dafny_args: "--library /exp/test_projects/Dafny-VMC/src/**/*.dfy --resource-limit 20000"
+Dafny_args: "--library /usr/local/home/eric/dafny_repos/Dafny-VMC/src/**/*.dfy --resource-limit 20000"
 Results_file: ./results_llm/stats_llm_DafnyVMC_sample10_placeholder_4t.csv

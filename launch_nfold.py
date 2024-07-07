@@ -28,7 +28,7 @@ k = len(df)
 
 # rewrite the path of "New Method File" but keep the same file name
 df["New Method File"] = df["New Method File"].apply(
-    lambda x: os.path.join("/exp/dafny_repair/results/", os.path.basename(x))
+    lambda x: os.path.join("./results/", os.path.basename(x))
 )
 
 

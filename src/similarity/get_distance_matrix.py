@@ -2,9 +2,7 @@ import ast
 import os
 import pandas as pd
 import pickle
-import sys
 
-sys.path.append("/exp/dafny_repair/src/")
 from token_wrapper import parse_token_output, call_tokenizer_csharp
 from dafny_utils import extract_dafny_functions
 
@@ -61,7 +59,7 @@ def get_tokens_df(tokens_file):
     df_non_verified = pd.DataFrame()
     projects = ["cedar", "libraries", "dafnyVMC"]
     for project in projects:
-        FILEPATH_NON_VERIFIED = f"/exp/dafny_repair/results/non_verified_{project}.csv"
+        FILEPATH_NON_VERIFIED = f"./results/non_verified_{project}.csv"
         df_project = pd.read_csv(FILEPATH_NON_VERIFIED)
         ## add a column to the df with the name of the project
         df_project["project"] = project
@@ -71,7 +69,7 @@ def get_tokens_df(tokens_file):
     methods_raw, methods_tokens = [], []
     for index, row in df_non_verified.iterrows():
         new_method_path = os.path.join(
-            "/exp/dafny_repair/results/" + os.path.basename(row["New Method File"])
+            "./results/" + os.path.basename(row["New Method File"])
         )
         method_content, method_tokens = process_method(
             new_method_path, row["New Method"]
@@ -90,13 +88,11 @@ def get_tokens_df(tokens_file):
 
 
 if __name__ == "__main__":
-    tokens_file = "/exp/dafny_repair/results/non_verified_tokens.csv"
+    tokens_file = "./results/non_verified_tokens.csv"
     df_non_verified = get_tokens_df(tokens_file)
     assertions_tokens = df_non_verified["Assertion Tokens"].apply(ast.literal_eval)
     methods_tokens = df_non_verified["New Method Tokens"].apply(ast.literal_eval)
     mspc = compute_clustering(
-        assertions_tokens, "/exp/dafny_repair/results/non_verified_assertions.pkl"
+        assertions_tokens, "./results/non_verified_assertions.pkl"
     )
-    mspc = compute_clustering(
-        methods_tokens, "/exp/dafny_repair/results/non_verified_methods.pkl"
-    )
+    mspc = compute_clustering(methods_tokens, "./results/non_verified_methods.pkl")
