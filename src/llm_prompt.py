@@ -1,3 +1,4 @@
+import copy
 import logging
 import json
 import openai
@@ -18,7 +19,7 @@ class Llm_prompt:
         with open(".secrets.yaml", "r") as f:
             secrets = yaml.safe_load(f)
         openai.api_key = secrets["OPENAI_API_KEY"]
-        model = models.OpenAI("gpt-4", echo=False, api_key=secrets["OPENAI_API_KEY"])
+        model = models.OpenAI("gpt-4o", echo=False, api_key=secrets["OPENAI_API_KEY"])
         messages = []
         chat = model
         if system_prompt:
@@ -36,6 +37,28 @@ class Llm_prompt:
 
         self.chat = chat
         self.messages = messages
+
+    def copy(self):
+        # Manually copy the attributes because
+        # a deepcopy would not work with guidance
+        new_prompt = Llm_prompt.__new__(Llm_prompt)
+        with open(".secrets.yaml", "r") as f:
+            secrets = yaml.safe_load(f)
+        model = models.OpenAI("gpt-4", echo=False, api_key=secrets["OPENAI_API_KEY"])
+        chat = model
+        new_prompt.messages = copy.deepcopy(self.messages)
+        for message in new_prompt.messages:
+            if message["role"] == "user":
+                with user():
+                    chat += message["content"]
+            elif message["role"] == "assistant":
+                with assistant():
+                    chat += message["content"]
+            elif message["role"] == "system":
+                with system():
+                    chat += message["content"]
+        new_prompt.chat = chat
+        return new_prompt
 
     def remove_answer(self, method_content, method_name):
         messages_copy = self.messages.copy()
@@ -139,8 +162,13 @@ class Llm_prompt:
             self.chat += error_feedback
         self.messages.append({"role": "user", "content": error_feedback})
 
-    def save_prompt(self, path):
-        with open(path, "w") as f:
+    def set_path(self, path):
+        self.path = path
+
+    def save_prompt(self):
+        if not hasattr(self, "path"):
+            raise ValueError("Prompt path not set")
+        with open(self.path, "w") as f:
             json.dump(self.messages, f)
 
     def get_prompt_length(self, encoding_name):
@@ -149,10 +177,62 @@ class Llm_prompt:
         num_tokens = len(encoding.encode(content_string))
         return num_tokens
 
+    def get_latest_message(self):
+        return self.messages[-1]
+
+    def get_n_fixes(self, model_parameters, n):
+        fixes = self.generate_n_fix(model_parameters, n)
+        duplicated_prompts = [self.copy() for _ in range(n - 1)]
+        duplicated_prompts.append(self)
+        for i, prompt in enumerate(duplicated_prompts):
+            prompt.messages.append({"role": "assistant", "content": fixes[i]})
+        return duplicated_prompts
+
     def get_fix(self, model_parameters):
         fix = self.generate_fix(model_parameters)
         self.messages.append({"role": "assistant", "content": fix})
         return fix
+
+    def generate_n_fix(self, model_parameters, n):
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "insert_dafny_assertion",
+                    "description": "Use this function to insert a Dafny assertion into a predefined placeholder.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "assertion": {
+                                "type": "string",
+                                "description": "The Dafny assertion to insert into the placeholder.",
+                            }
+                        },
+                        "required": ["assertion"],
+                    },
+                },
+            }
+        ]
+        response = openai.chat.completions.create(
+            model=model_parameters["Model"],
+            temperature=model_parameters["Temperature"],
+            max_tokens=model_parameters["Max_tokens"],
+            messages=self.messages,
+            tools=tools,
+            tool_choice={
+                "type": "function",
+                "function": {"name": "insert_dafny_assertion"},
+            },
+            n=n,
+        )
+
+        generated_fixes = []
+        for choice in response.choices:
+            generated_fixes.append(
+                json.loads(choice.message.tool_calls[0].function.arguments)["assertion"]
+            )
+
+        return generated_fixes
 
     def generate_fix(self, model_parameters):
         tools = [
