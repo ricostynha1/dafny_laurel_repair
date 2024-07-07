@@ -38,7 +38,13 @@ def generate_notebook_url(result_file, assertion_file, method_index):
     return full_url
 
 
-def generate_fix_llm(config_file, pruning_file, output_file=None, training_file=None):
+def generate_fix_llm(
+    config_file,
+    pruning_file,
+    output_file=None,
+    training_file=None,
+    method_to_process=None,
+):
     pruning_results = read_pruning_result(pruning_file)
     _, config = parse_config_llm(config_file)
     method_processed, success_count = 0, 0
@@ -83,10 +89,9 @@ def generate_fix_llm(config_file, pruning_file, output_file=None, training_file=
                 config_prompt["Context"]["Training_file"] = training_file
         examples_selectors.append(ExamplesSelector(config_prompt))
     for row in pruning_results:
-        # if method_processed != 10:
-        #     method_processed += 1
-        #     continue
-        # TODO: add a parameter for the number of methods to process
+        if method_to_process is not None and method_processed != method_to_process:
+            method_processed += 1
+            continue
         print(f"Method processed: {method_processed}/{len(pruning_results)}")
         (
             method,

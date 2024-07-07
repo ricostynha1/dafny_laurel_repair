@@ -22,6 +22,9 @@ def parse_arguments():
     llm_parser.add_argument("--pruning_results", "-p", help="CSV pruning results file")
     llm_parser.add_argument("--output_file", "-o", help="Output_result_file")
     llm_parser.add_argument("--training_file", "-t", help="Training file")
+    llm_parser.add_argument(
+        "--method_to_process", "-m", help="Method to process", type=int
+    )
 
     prune_assert_parser = subparsers.add_parser(
         "prune-assert", help="Prune-assert mode"
@@ -48,4 +51,5 @@ if __name__ == "__main__":
             pruning_file=args.pruning_results,
             output_file=args.output_file,
             training_file=args.training_file,
+            method_to_process=args.method_to_process,
         )
