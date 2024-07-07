@@ -43,24 +43,9 @@ if __name__ == "__main__":
         remove_assertions(args.config_file)
     elif args.mode == "llm":
         logger.info("==== Starting the llm fix ====")
-        if args.training_file and args.pruning_results and args.output_file:
-            generate_fix_llm(
-                args.config_file,
-                pruning_file=args.pruning_results,
-                output_file=args.output_file,
-                training_file=args.training_file,
-            )
-        elif args.pruning_results and args.output_file:
-            generate_fix_llm(
-                args.config_file,
-                pruning_file=args.pruning_results,
-                output_file=args.output_file,
-            )
-        elif args.pruning_results:
-            methods = []
-            generate_fix_llm(
-                args.config_file,
-                pruning_file=args.pruning_results,
-            )
-        else:
-            generate_fix_llm(args.config_file)
+        generate_fix_llm(
+            args.config_file,
+            pruning_file=args.pruning_results,
+            output_file=args.output_file,
+            training_file=args.training_file,
+        )

@@ -21,27 +21,8 @@ from select_example import ExamplesSelector
 
 logger = logging.getLogger(__name__)
 
-SERVER_NAME = "http://c10-09.sysnet.ucsd.edu:8866/"
-
-
-def generate_fix_llm(
-    config_file, pruning_file=None, output_file=None, training_file=None
-):
-    if training_file and pruning_file and output_file:
-        return handle_pruning_results(
-            config_file,
-            pruning_file,
-            output_file=output_file,
-            training_file=training_file,
-        )
-    elif pruning_file and output_file:
-        return handle_pruning_results(
-            config_file, pruning_file, output_file=output_file
-        )
-    elif pruning_file:
-        return handle_pruning_results(config_file, pruning_file)
-    else:
-        return handle_no_pruning_results(config_file)
+# TODO: pass this as a configuration parameter
+SERVER_NAME = "http://c10-10.sysnet.ucsd.edu:8866/"
 
 
 def generate_notebook_url(result_file, assertion_file, method_index):
@@ -57,9 +38,7 @@ def generate_notebook_url(result_file, assertion_file, method_index):
     return full_url
 
 
-def handle_pruning_results(
-    config_file, pruning_file, output_file=None, training_file=None
-):
+def generate_fix_llm(config_file, pruning_file, output_file=None, training_file=None):
     pruning_results = read_pruning_result(pruning_file)
     _, config = parse_config_llm(config_file)
     method_processed, success_count = 0, 0
@@ -107,6 +86,7 @@ def handle_pruning_results(
         # if method_processed != 10:
         #     method_processed += 1
         #     continue
+        # TODO: add a parameter for the number of methods to process
         print(f"Method processed: {method_processed}/{len(pruning_results)}")
         (
             method,
@@ -117,7 +97,7 @@ def handle_pruning_results(
             notebook_url = generate_notebook_url(
                 output_file if output_file is not None else config["Results_file"],
                 pruning_file,
-                method_processed,
+                method.index,
             )
             success = process_method_bis(
                 method,
@@ -141,49 +121,6 @@ def handle_pruning_results(
     # upload_results(
     #     config_file, output_file if output_file is not None else config["Results_file"]
     # )
-    return success_count, method_processed
-
-
-def handle_no_pruning_results(config_file):
-    methods, config = parse_config_llm(config_file)
-    method_processed, success_count = 0, 0
-
-    for method in methods:
-        original_file_location = method.file_path
-        method_processed += 1
-        (
-            new_method,
-            prompt_path,
-            prompt_length,
-            diff,
-            prompt_index,
-            prompt_name,
-        ) = process_method(
-            method,
-            config,
-            method_processed,
-            original_file_location,
-            original_file_location,
-            None,
-        )
-        shutil.copy(method.file_path, original_file_location)
-        # success_count += (
-        #     1
-        #     if store_results_and_compare(
-        #         method,
-        #         new_method,
-        #         config,
-        #         method.file_path,
-        #         prompt_path,
-        #         prompt_length,
-        #         diff,
-        #         prompt_index,
-        #         prompt_name,
-        #     )
-        #     else 0
-        # )
-        logger.info(f"Success rate: {success_count}/{method_processed}")
-
     return success_count, method_processed
 
 
@@ -211,7 +148,7 @@ def test_prompt(
         )
     diff = method.get_diff(new_method_content)
     new_method = method.create_modified_method(
-        new_method_content, os.path.dirname(method.file_path), index, try_nb, "fix"
+        new_method_content, os.path.dirname(method.file_path), try_nb, "fix"
     )
     logger.debug(f"diff : {diff}")
     method.move_to_results_directory(config["Results_dir"])
@@ -219,9 +156,7 @@ def test_prompt(
     return new_method, diff
 
 
-def insert_assertion(
-    method_with_placeholder, original_method, fix_prompt, method_index, try_number
-):
+def insert_assertion(method_with_placeholder, original_method, fix_prompt, try_number):
     if "\n" not in fix_prompt:
         new_method_content = method_with_placeholder.replace(
             "<assertion> Insert assertion here </assertion>", fix_prompt
@@ -235,7 +170,6 @@ def insert_assertion(
     new_method = original_method.create_modified_method(
         new_method_content,
         os.path.dirname(original_method.file_path),
-        method_index,
         try_number,
         "fix",
     )
@@ -297,7 +231,7 @@ def process_method_bis(
                 prompt.set_path(prompt_path)
                 response = prompt.get_latest_message()["content"]
                 new_method, diff = insert_assertion(
-                    method_with_placeholder, method, response, index, i
+                    method_with_placeholder, method, response, i
                 )
                 method.move_to_results_directory(config["Results_dir"])
                 new_method.run_verification(
@@ -315,7 +249,6 @@ def process_method_bis(
                 method.move_to_results_directory(os.path.dirname(original_method_file))
                 new_method.move_to_results_directory(config["Results_dir"])
                 store_results(
-                    index,
                     method,
                     new_method,
                     original_file_location,
@@ -346,7 +279,7 @@ def process_method_bis(
                     prompt.get_fix(config["Model_parameters"])
                     response = prompt.get_latest_message()["content"]
                     new_method, diff = insert_assertion(
-                        method_with_placeholder, method, response, index, i
+                        method_with_placeholder, method, response, i
                     )
                     method.move_to_results_directory(config["Results_dir"])
                     new_method.run_verification(
@@ -365,7 +298,6 @@ def process_method_bis(
                         success = True
                     # TODO: gather prompt things in the same object
                     store_results(
-                        index,
                         method,
                         new_method,
                         original_file_location,
@@ -393,7 +325,6 @@ def process_method_bis(
                 with open(error_path, "w") as f:
                     f.write(f"{e}\n{traceback_str}")
                 store_results(
-                    index,
                     method,
                     new_method,
                     original_file_location,
@@ -480,7 +411,6 @@ def process_method(
                     )
                     new_method.move_to_results_directory(config["Results_dir"])
                     store_results(
-                        index,
                         method,
                         new_method,
                         original_file_location,
@@ -535,7 +465,6 @@ def process_method(
                         )
                         new_method.move_to_results_directory(config["Results_dir"])
                         store_results(
-                            index,
                             method,
                             new_method,
                             original_file_location,
@@ -566,7 +495,6 @@ def process_method(
                     # )
                     new_method.move_to_results_directory(config["Results_dir"])
                     store_results(
-                        index,
                         method,
                         new_method,
                         original_file_location,
@@ -588,7 +516,6 @@ def process_method(
                     # method.file_path = original_file_location
                 else:
                     store_results(
-                        index,
                         method,
                         new_method,
                         original_file_location,
@@ -615,7 +542,6 @@ def process_method(
                 with open(error_path, "w") as f:
                     f.write(f"{e}\n{traceback_str}")
                 store_results(
-                    index,
                     method,
                     new_method,
                     original_file_location,
@@ -680,7 +606,6 @@ def cleanup_environment(tmp_original_file_location, original_file_path):
 
 
 def store_results(
-    method_index,
     method,
     new_method,
     original_file,
@@ -695,14 +620,13 @@ def store_results(
     notebook_url,
     csv_writer,
 ):
-    fix_stats = [
-        method_index,
-        original_file,
-    ]
+    fix_stats = []
 
     try:
         fix_stats.extend(
             [
+                method.index,
+                original_file,
                 method.method_name,
                 method.verification_time,
                 method.verification_result,
@@ -711,7 +635,8 @@ def store_results(
                 method.error_file_path,
             ]
         )
-    except AttributeError:
+    except AttributeError as e:
+        logger.info(f"An error occurred when writing the results: {e}")
         fix_stats.extend(
             [
                 "default_method_name",
