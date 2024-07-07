@@ -104,10 +104,9 @@ def generate_fix_llm(
                 pruning_file,
                 method.index,
             )
-            success = process_method_bis(
+            success = process_method(
                 method,
                 config,
-                method_processed,
                 row["New Method File"],
                 original_method_file,
                 csv_writer,
@@ -124,38 +123,6 @@ def generate_fix_llm(
 
     file.close()
     return success_count, method_processed
-
-
-def test_prompt(
-    llm_prompt, prompt_path, config, method, index, try_nb, method_with_placeholder
-):
-    logger.info(f"{method.method_name} ===> Try {try_nb+1}")
-    response = llm_prompt.get_fix(
-        config["Model_parameters"],
-    )
-    # TODO this is going to be an assertion
-    fix_prompt = response
-    print(f"Fix prompt: {fix_prompt}")
-    logger.info(fix_prompt)
-    # TODO insert the assertion
-    if "\n" not in fix_prompt:
-        new_method_content = method_with_placeholder.replace(
-            "<assertion> Insert assertion here </assertion>", fix_prompt
-        )
-        print(new_method_content)
-    else:
-        code = extract_string_between_backticks(fix_prompt)
-        new_method_content = get_new_method_content(
-            code if code else fix_prompt, method.method_name
-        )
-    diff = method.get_diff(new_method_content)
-    new_method = method.create_modified_method(
-        new_method_content, os.path.dirname(method.file_path), try_nb, "fix"
-    )
-    logger.debug(f"diff : {diff}")
-    method.move_to_results_directory(config["Results_dir"])
-    new_method.run_verification(config["Results_dir"], config.get("Dafny_args", ""))
-    return new_method, diff
 
 
 def insert_assertion(method_with_placeholder, original_method, fix_prompt, try_number):
@@ -179,10 +146,39 @@ def insert_assertion(method_with_placeholder, original_method, fix_prompt, try_n
     return new_method, diff
 
 
-def process_method_bis(
+def generate_prompts(prompt_index, config_prompt, examples_selectors, method, config):
+    threshold = config_prompt.get("Context", {}).get("Threshold", 0)
+
+    llm_prompt = Llm_prompt(
+        prompt_index,
+        config_prompt["System_prompt"],
+        examples_selectors[prompt_index - 1],
+    )
+
+    prompt_path = f"{method.file_path}_{method.index}_{llm_prompt.index}_{config_prompt['Prompt_name']}_prompt"
+    llm_prompt.set_path(prompt_path)
+
+    method_with_placeholder = llm_prompt.add_question(
+        method.file_path,
+        method.method_name,
+        method.entire_error_message,
+        config["Model_parameters"],
+        config_prompt,
+        method.entire_error_message if config_prompt["Feedback"] else None,
+        examples_selectors[prompt_index - 1],
+        threshold,
+    )
+
+    new_prompts = llm_prompt.get_n_fixes(
+        config["Model_parameters"], config_prompt["Nb_tries"]
+    )
+
+    return new_prompts, method_with_placeholder
+
+
+def process_method(
     method,
     config,
-    index,
     original_file_location,
     original_method_file,
     csv_writer,
@@ -196,38 +192,14 @@ def process_method_bis(
     new_method = None
     diff = ""
     for prompt_index, config_prompt in enumerate(config["Prompts"], start=1):
-        threshold = 0
-        if (
-            config_prompt["Context"] is not None
-            and "Threshold" in config_prompt["Context"]
-        ):
-            threshold = config_prompt["Context"]["Threshold"]
-
-        llm_prompt = Llm_prompt(
-            prompt_index,
-            config_prompt["System_prompt"],
-            examples_selectors[prompt_index - 1],
-        )
-        prompt_path = f"{method.file_path}_{index}_{llm_prompt.index}_{config_prompt['Prompt_name']}_prompt"
-        llm_prompt.set_path(prompt_path)
-        method_with_placeholder = llm_prompt.add_question(
-            method.file_path,
-            method.method_name,
-            method.entire_error_message,
-            config["Model_parameters"],
-            config_prompt,
-            method.entire_error_message if config_prompt["Feedback"] else None,
-            examples_selectors[prompt_index - 1],
-            threshold,
-        )
-        new_prompts = llm_prompt.get_n_fixes(
-            config["Model_parameters"], config_prompt["Nb_tries"]
+        new_prompts, method_with_placeholder = generate_prompts(
+            prompt_index, config_prompt, examples_selectors, method, config
         )
         for i, prompt in enumerate(new_prompts, start=1):
             try:
                 logger.info(f"{method.method_name} ===> Try {i}")
                 feedback = False
-                prompt_path = f"{method.file_path}_{index}_{prompt_index}_{config_prompt['Prompt_name']}_prompt"
+                prompt_path = f"{method.file_path}_{method.index}_{prompt_index}_{config_prompt['Prompt_name']}_prompt"
                 prompt.set_path(prompt_path)
                 response = prompt.get_latest_message()["content"]
                 new_method, diff = insert_assertion(
@@ -238,7 +210,7 @@ def process_method_bis(
                     config["Results_dir"], config.get("Dafny_args", "")
                 )
                 prompt.save_prompt()
-                prompt_length = llm_prompt.get_prompt_length(
+                prompt_length = prompt.get_prompt_length(
                     config["Model_parameters"]["Encoding"]
                 )
                 logger.info(f"Prompt length: {prompt_length}")
@@ -252,9 +224,9 @@ def process_method_bis(
                     method,
                     new_method,
                     original_file_location,
-                    llm_prompt.path,
+                    prompt.path,
                     prompt_length,
-                    llm_prompt.index,
+                    prompt.index,
                     config_prompt["Prompt_name"],
                     "",
                     feedback,
@@ -301,9 +273,9 @@ def process_method_bis(
                         method,
                         new_method,
                         original_file_location,
-                        prompt_path,
+                        prompt.path,
                         prompt_length,
-                        prompt_index,
+                        prompt.index,
                         config_prompt["Prompt_name"],
                         "",
                         feedback,
@@ -321,7 +293,7 @@ def process_method_bis(
                 prompt_length = prompt.get_prompt_length(
                     config["Model_parameters"]["Encoding"]
                 )
-                error_path = f"{method.file_path}_{index}_{prompt_index}_error"
+                error_path = f"{method.file_path}_{method.index}_{prompt_index}_error"
                 with open(error_path, "w") as f:
                     f.write(f"{e}\n{traceback_str}")
                 store_results(
