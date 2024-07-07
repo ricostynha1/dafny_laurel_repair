@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class Llm_prompt:
-    def __init__(self, system_prompt, example_selector):
+    def __init__(self, index, system_prompt, example_selector):
         with open(".secrets.yaml", "r") as f:
             secrets = yaml.safe_load(f)
         openai.api_key = secrets["OPENAI_API_KEY"]
@@ -37,6 +37,7 @@ class Llm_prompt:
 
         self.chat = chat
         self.messages = messages
+        self.index = index
 
     def copy(self):
         # Manually copy the attributes because
@@ -58,6 +59,7 @@ class Llm_prompt:
                 with system():
                     chat += message["content"]
         new_prompt.chat = chat
+        new_prompt.index = self.index
         return new_prompt
 
     def remove_answer(self, method_content, method_name):

@@ -196,7 +196,6 @@ def process_method_bis(
     new_method = None
     diff = ""
     for prompt_index, config_prompt in enumerate(config["Prompts"], start=1):
-        # create a new prompt
         threshold = 0
         if (
             config_prompt["Context"] is not None
@@ -205,10 +204,11 @@ def process_method_bis(
             threshold = config_prompt["Context"]["Threshold"]
 
         llm_prompt = Llm_prompt(
+            prompt_index,
             config_prompt["System_prompt"],
             examples_selectors[prompt_index - 1],
         )
-        prompt_path = f"{method.file_path}_{index}_{prompt_index}_{config_prompt['Prompt_name']}_prompt"
+        prompt_path = f"{method.file_path}_{index}_{llm_prompt.index}_{config_prompt['Prompt_name']}_prompt"
         llm_prompt.set_path(prompt_path)
         method_with_placeholder = llm_prompt.add_question(
             method.file_path,
@@ -252,9 +252,9 @@ def process_method_bis(
                     method,
                     new_method,
                     original_file_location,
-                    prompt_path,
+                    llm_prompt.path,
                     prompt_length,
-                    prompt_index,
+                    llm_prompt.index,
                     config_prompt["Prompt_name"],
                     "",
                     feedback,
@@ -340,233 +340,6 @@ def process_method_bis(
                     csv_writer,
                 )
     return success
-
-
-def process_method(
-    method,
-    config,
-    index,
-    original_file_location,
-    original_method_file,
-    csv_writer,
-    notebook_url,
-    examples_selectors,
-):
-    logger.info("+--------------------------------------+")
-    method.run_verification(config["Results_dir"], config.get("Dafny_args", ""))
-    logger.debug(method)
-    new_method = None
-    diff = ""
-    for prompt_index, config_prompt in enumerate(config["Prompts"], start=1):
-        for i in range(config_prompt["Nb_tries"]):
-            feedback = False
-
-            threshold = 0
-            if (
-                config_prompt["Context"] is not None
-                and "Threshold" in config_prompt["Context"]
-            ):
-                threshold = config_prompt["Context"]["Threshold"]
-
-            try:
-                llm_prompt = Llm_prompt(
-                    config_prompt["System_prompt"],
-                    examples_selectors[prompt_index - 1],
-                )
-                prompt_path = f"{method.file_path}_{index}_{i}_{config_prompt['Prompt_name']}_prompt"
-                method_with_placeholder = llm_prompt.add_question(
-                    method.file_path,
-                    method.method_name,
-                    method.entire_error_message,
-                    config["Model_parameters"],
-                    config_prompt,
-                    method.entire_error_message if config_prompt["Feedback"] else None,
-                    examples_selectors[prompt_index - 1],
-                    threshold,
-                )
-                new_method, diff = test_prompt(
-                    llm_prompt,
-                    prompt_path,
-                    config,
-                    method,
-                    index,
-                    i,
-                    method_with_placeholder,
-                )
-                llm_prompt.save_prompt(prompt_path)
-                prompt_length = llm_prompt.get_prompt_length(
-                    config["Model_parameters"]["Encoding"]
-                )
-                logger.info(f"Prompt length: {prompt_length}")
-                previous_error = remove_warning(method.entire_error_message)
-                new_error = ""
-                if new_method.entire_error_message is not None:
-                    new_error = remove_warning(new_method.entire_error_message)
-                if new_method.verification_result == "Correct":
-                    logger.info(f"Success with prompt {prompt_index} on try {i}")
-                    method.move_to_results_directory(
-                        os.path.dirname(original_file_location)
-                    )
-                    new_method.move_to_results_directory(config["Results_dir"])
-                    store_results(
-                        method,
-                        new_method,
-                        original_file_location,
-                        prompt_path,
-                        prompt_length,
-                        prompt_index,
-                        config_prompt["Prompt_name"],
-                        "",
-                        feedback,
-                        i,
-                        diff,
-                        notebook_url,
-                        csv_writer,
-                    )
-                    return (
-                        new_method,
-                        prompt_path,
-                        prompt_length,
-                        diff,
-                        prompt_index,
-                        config_prompt["Prompt_name"],
-                        True,
-                    )
-                elif (
-                    not compare_errormessage(previous_error, new_error)
-                    and config_prompt["Error_feedback"]
-                ):
-                    feedback = True
-                    new_method.move_to_results_directory(config["Results_dir"])
-                    # shutil.copy(original_file_location, original_method_file)
-                    shutil.copy(method.file_path, original_method_file)
-                    method.file_path = original_method_file
-
-                    llm_prompt.feedback_error_message(new_error)
-                    new_method, diff = test_prompt(
-                        llm_prompt,
-                        prompt_path,
-                        config,
-                        method,
-                        index,
-                        i,
-                        method_with_placeholder,
-                    )
-                    llm_prompt.save_prompt(prompt_path)
-                    prompt_length = llm_prompt.get_prompt_length(
-                        config["Model_parameters"]["Encoding"]
-                    )
-                    logger.info(f"Prompt length: {prompt_length}")
-                    if new_method.verification_result == "Correct":
-                        method.move_to_results_directory(
-                            os.path.dirname(original_file_location)
-                        )
-                        new_method.move_to_results_directory(config["Results_dir"])
-                        store_results(
-                            method,
-                            new_method,
-                            original_file_location,
-                            prompt_path,
-                            prompt_length,
-                            prompt_index,
-                            config_prompt["Prompt_name"],
-                            "",
-                            feedback,
-                            i,
-                            diff,
-                            notebook_url,
-                            csv_writer,
-                        )
-                        logger.info(f"Success with prompt {prompt_index} on try {i}")
-                        return (
-                            new_method,
-                            prompt_path,
-                            prompt_length,
-                            diff,
-                            prompt_index,
-                            config_prompt["Prompt_name"],
-                            True,
-                        )
-                if i + 1 != config_prompt["Nb_tries"]:
-                    # method.move_to_results_directory(
-                    #     os.path.dirname(original_method_file)
-                    # )
-                    new_method.move_to_results_directory(config["Results_dir"])
-                    store_results(
-                        method,
-                        new_method,
-                        original_file_location,
-                        prompt_path,
-                        prompt_length,
-                        prompt_index,
-                        config_prompt["Prompt_name"],
-                        "",
-                        feedback,
-                        i,
-                        diff,
-                        notebook_url,
-                        csv_writer,
-                    )
-                    method.move_to_results_directory(
-                        os.path.dirname(original_method_file)
-                    )
-                    # shutil.copy(method.file_path, original_file_location)
-                    # method.file_path = original_file_location
-                else:
-                    store_results(
-                        method,
-                        new_method,
-                        original_file_location,
-                        prompt_path,
-                        prompt_length,
-                        prompt_index,
-                        config_prompt["Prompt_name"],
-                        "",
-                        feedback,
-                        i,
-                        diff,
-                        notebook_url,
-                        csv_writer,
-                    )
-
-            except Exception as e:
-                traceback_str = traceback.format_exc()
-                logger.error(f"An error occurred: {e}\n{traceback_str}")
-                llm_prompt.save_prompt(prompt_path)
-                prompt_length = llm_prompt.get_prompt_length(
-                    config["Model_parameters"]["Encoding"]
-                )
-                error_path = f"{method.file_path}_{index}_{i}_error"
-                with open(error_path, "w") as f:
-                    f.write(f"{e}\n{traceback_str}")
-                store_results(
-                    method,
-                    new_method,
-                    original_file_location,
-                    prompt_path,
-                    prompt_length,
-                    prompt_index,
-                    config_prompt["Prompt_name"],
-                    error_path,
-                    feedback,
-                    i,
-                    diff,
-                    notebook_url,
-                    csv_writer,
-                )
-
-        method.move_to_results_directory(os.path.dirname(original_file_location))
-        if new_method is not None:
-            new_method.move_to_results_directory(config["Results_dir"])
-        return (
-            new_method,
-            prompt_path,
-            prompt_length,
-            diff,
-            prompt_index,
-            config_prompt["Prompt_name"],
-            False,
-        )
 
 
 def setup_verification_environment(config, row, index=0):
