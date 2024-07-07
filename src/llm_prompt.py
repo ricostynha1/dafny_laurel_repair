@@ -81,13 +81,11 @@ class Llm_prompt:
         program_to_fix,
         method_name,
         error_message,
-        fix_prompt,
         model_parameters,
-        context_option,
+        config_prompt,
         feedback,
         example_selector,
         threshold,
-        placeholder,
     ):
         with open(program_to_fix, "r") as f:
             content = f.read()
@@ -95,7 +93,7 @@ class Llm_prompt:
         examples = []
         if example_selector.nature == "Dynamic":
             examples = example_selector.generate_dynamic_examples(
-                method, threshold, fix_prompt, program_to_fix
+                method, threshold, config_prompt["Fix_prompt"], program_to_fix
             )
         for example in examples:
             with user():
@@ -108,16 +106,16 @@ class Llm_prompt:
         self.remove_answer(method, method_name)
         context = content.replace(method, "")
 
-        # current size =
         current_prompt_length = self.get_prompt_length(model_parameters["Encoding"])
         encoding = tiktoken.get_encoding(model_parameters["Encoding"])
         num_tokens_method = len(encoding.encode(method))
-        num_tokens_fix_prompt = len(encoding.encode(fix_prompt))
+        num_tokens_fix_prompt = len(encoding.encode(config_prompt["Fix_prompt"]))
         current_prompt_length += num_tokens_method + num_tokens_fix_prompt
-        # depending on feedback included add the feedback
+
         method_to_insert = method
-        if placeholder:
+        if config_prompt["Placeholder"]:
             method_to_insert = insert_assertion_location(error_message, method, content)
+        fix_prompt = config_prompt["Fix_prompt"]
         question = f"{fix_prompt}\n <method> {method_to_insert} </method>"
         if feedback:
             num_tokens_feedback = len(encoding.encode(feedback))
@@ -125,8 +123,7 @@ class Llm_prompt:
             question += f"\n\n<error>\n{feedback}\n</error>"
             logger.debug(f"Feedback added: {num_tokens_feedback}")
 
-        # if context enabled:
-        if context_option == "File":
+        if config_prompt["Method_context"] == "File":
             encoded_context = encoding.encode(context)
             num_tokens_context = len(encoded_context)
             if (

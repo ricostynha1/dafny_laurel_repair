@@ -123,9 +123,6 @@ def generate_fix_llm(
         method_processed += 1
 
     file.close()
-    # upload_results(
-    #     config_file, output_file if output_file is not None else config["Results_file"]
-    # )
     return success_count, method_processed
 
 
@@ -217,13 +214,11 @@ def process_method_bis(
             method.file_path,
             method.method_name,
             method.entire_error_message,
-            config_prompt["Fix_prompt"],
             config["Model_parameters"],
-            config_prompt["Method_context"],
+            config_prompt,
             method.entire_error_message if config_prompt["Feedback"] else None,
             examples_selectors[prompt_index - 1],
             threshold,
-            config_prompt["Placeholder"],
         )
         new_prompts = llm_prompt.get_n_fixes(
             config["Model_parameters"], config_prompt["Nb_tries"]
@@ -383,13 +378,11 @@ def process_method(
                     method.file_path,
                     method.method_name,
                     method.entire_error_message,
-                    config_prompt["Fix_prompt"],
                     config["Model_parameters"],
-                    config_prompt["Method_context"],
+                    config_prompt,
                     method.entire_error_message if config_prompt["Feedback"] else None,
                     examples_selectors[prompt_index - 1],
                     threshold,
-                    config_prompt["Placeholder"],
                 )
                 new_method, diff = test_prompt(
                     llm_prompt,
