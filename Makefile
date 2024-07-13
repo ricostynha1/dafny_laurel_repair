@@ -4,7 +4,7 @@ run_lib:
 run_lib_none:
 	poetry run python src/test_harness.py llm configs/config_llm_libraries_sample10_none.yaml  -p results/testing_libraries_assertion.csv
 run_lib_static:
-	poetry run python src/test_harness.py llm configs/config_llm_libraries_sample10_staticp.yaml  -p results/testing_libraries_assertion.csv
+	poetry run python src/test_harness.py llm configs/config_llm_libraries_sample10_staticp.yaml  -p results/testing_libraries_assertion.csv -m 10
 run_lib_dynamic:
 	poetry run python src/test_harness.py llm configs/config_llm_libraries_sample10_dynamicp.yaml  -p results/testing_libraries_assertion.csv
 run_cedar:

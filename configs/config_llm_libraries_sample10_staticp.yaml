@@ -14,7 +14,7 @@ Prompts:
     Fix_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
     Method_context: "None"
     Feedback: False
-    Error_feedback: False
+    Error_feedback: True
     Nb_tries: 1
     Prompt_name: "placeholder"
     Type: "Static"
