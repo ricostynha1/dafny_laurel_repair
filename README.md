@@ -138,3 +138,7 @@ Execute the following command:
 ```sh
 make run_lib_static
 ```
+
+### Dataset location
+
+All the assertions are available in `./results/placeholder_dataset/`.

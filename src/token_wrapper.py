@@ -5,10 +5,7 @@ TOKENIZER_CSHARP_PATH = "tokenizer_csharp/bin/Debug/net6.0/tokenizer_csharp"
 
 
 def call_tokenizer_csharp(code):
-    command = [
-        os.path.dirname(__file__)
-        + "/tokenizer_csharp/bin/Debug/net6.0/tokenizer_csharp"
-    ]
+    command = [os.path.join(os.path.dirname(__file__), TOKENIZER_CSHARP_PATH)]
     result = subprocess.run(
         command, input=code, capture_output=True, text=True, check=True
     )
