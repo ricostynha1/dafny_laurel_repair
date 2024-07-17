@@ -6,12 +6,117 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Dafny;
 
 namespace placeholder
 {
+    public class DafnyError
+    {
+        public string File { get; set; }
+        public int Line { get; set; }
+        public int Column { get; set; }
+        public string ErrorMessage { get; set; }
+        public string LineContent { get; set; }
+        public List<DafnyError> RelatedErrors { get; set; } = new List<DafnyError>();
+
+        public override string ToString()
+        {
+            string relatedErrorsStr = string.Join("\n", RelatedErrors);
+            return $"File: {File}, Line: {Line}, Column: {Column}, Error: {ErrorMessage}, Content: {LineContent}\nRelated Errors:\n{relatedErrorsStr}";
+        }
+    }
+
+    public static class ErrorParser
+    {
+        public static List<DafnyError> ParseErrors(string errorString)
+        {
+            var errorList = new List<DafnyError>();
+            var lines = errorString.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+            var regex = new Regex(
+                @"^(?<file>.+\.dfy)\((?<line>\d+),(?<column>\d+)\): (?<error>.+)$"
+            );
+
+            DafnyError currentError = null;
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var match = regex.Match(lines[i]);
+                if (match.Success)
+                {
+                    var file = match.Groups["file"].Value;
+                    var line = int.Parse(match.Groups["line"].Value);
+                    var column = int.Parse(match.Groups["column"].Value);
+                    var errorMessage = match.Groups["error"].Value;
+
+                    var newError = new DafnyError
+                    {
+                        File = file,
+                        Line = line,
+                        Column = column,
+                        ErrorMessage = errorMessage
+                    };
+
+                    var lineContent = string.Empty;
+                    if (i + 2 < lines.Length && lines[i + 2].StartsWith($"{line} |"))
+                    {
+                        lineContent = lines[i + 2].Substring(lines[i + 2].IndexOf('|') + 1).Trim();
+                    }
+                    newError.LineContent = lineContent;
+
+                    if (currentError != null && errorMessage.Contains("Related location"))
+                    {
+                        currentError.RelatedErrors.Add(newError);
+                    }
+                    else
+                    {
+                        if (currentError != null)
+                        {
+                            errorList.Add(currentError);
+                        }
+                        currentError = newError;
+                    }
+
+                    // Skip the next few lines as they are part of the current error
+                    i += 3;
+                }
+            }
+
+            if (currentError != null)
+            {
+                errorList.Add(currentError);
+            }
+
+            return errorList;
+        }
+    }
+
+    class ErrorMessageDivider
+    {
+        public static List<string> DivideErrorMessages(string errorMessages)
+        {
+            var errors = new List<string>();
+            var error = "";
+            foreach (var line in errorMessages.Split('\n'))
+            {
+                if (
+                    line.Contains("Dafny program verifier finished with")
+                    || line.Contains("Dafny program verifier failed with")
+                )
+                {
+                    if (error != "")
+                    {
+                        errors.Add(error);
+                    }
+                    error = "";
+                }
+                error += line + "\n";
+            }
+            return errors;
+        }
+    }
+
     class MainReturnValTest
     {
         public static Declaration FindMethodByName(Program program, string declarationName)
@@ -24,17 +129,86 @@ namespace placeholder
                     {
                         foreach (var member in c.Members)
                         {
-                        if ((member is Function f && f.Name == declarationName) ||
-                        (member is Method m && m.Name == declarationName) ||
-                        (member is Lemma l && l.Name == declarationName))
-                    {
-                        return member;
-                    }
+                            if (
+                                (member is Function f && f.Name == declarationName)
+                                || (member is Method m && m.Name == declarationName)
+                                || (member is Lemma l && l.Name == declarationName)
+                            )
+                            {
+                                return member;
+                            }
                         }
                     }
                 }
             }
             return null; // Return null if the method is not found
+        }
+
+        public static (Statement, string) IdentifyPriorityError(
+            Method method,
+            List<DafnyError> errorMessages
+        )
+        {
+            foreach (var statement in method.Body.Body)
+            {
+                foreach (var error in errorMessages)
+                {
+                    if (error.LineContent == statement.ToString())
+                    {
+                        return (statement, error.ErrorMessage);
+                    }
+
+                    foreach (var relatedError in error.RelatedErrors)
+                    {
+                        if (relatedError.LineContent == statement.ToString())
+                        {
+                            return (statement, relatedError.ErrorMessage);
+                        }
+                    }
+                }
+            }
+            return (null, null);
+        }
+
+        public static (Statement, string) IdentifyPriorityError(
+            Lemma lemma,
+            List<DafnyError> errorMessages
+        )
+        {
+            foreach (var statement in lemma.Body.Body)
+            {
+                foreach (var error in errorMessages)
+                {
+                    if (error.LineContent == statement.ToString())
+                    {
+                        return (statement, error.ErrorMessage);
+                    }
+
+                    foreach (var relatedError in error.RelatedErrors)
+                    {
+                        if (relatedError.LineContent == statement.ToString())
+                        {
+                            return (statement, relatedError.ErrorMessage);
+                        }
+                    }
+                }
+            }
+            return (null, null);
+        }
+
+        public static (Statement, string) IdentifyPriorityError(
+            Lemma lemma,
+            List<string> errorMessages
+        )
+        {
+            foreach (var statement in lemma.Body.Body)
+            {
+                if (errorMessages.Contains(statement.ToString()))
+                {
+                    return (statement, statement.ToString());
+                }
+            }
+            return (null, null);
         }
 
         static int Main(string[] args)
@@ -52,6 +226,11 @@ namespace placeholder
             string methodName = args[1];
             string input;
             input = Console.In.ReadToEnd();
+            var errors = ErrorParser.ParseErrors(input);
+            foreach (var error in errors)
+            {
+                Console.WriteLine(error);
+            }
             if (!Path.IsPathRooted(methodFile))
             {
                 methodFile = Path.GetFullPath(methodFile);
@@ -76,9 +255,15 @@ namespace placeholder
 
             // TODO this is a special case for Dafny-VMC --library flag (it should not be needed for the rest)
             var ImmutableDictionary = new Dictionary<Uri, string>();
-            foreach (string fileInclude in Directory.EnumerateFiles("/usr/local/home/eric/dafny_repos/Dafny-VMC/src", "*.dfy", SearchOption.AllDirectories))
+            foreach (
+                string fileInclude in Directory.EnumerateFiles(
+                    "/usr/local/home/eric/dafny_repos/Dafny-VMC/src",
+                    "*.dfy",
+                    SearchOption.AllDirectories
+                )
+            )
             {
-            // everything except Reals.dfy
+                // everything except Reals.dfy
                 if (fileInclude.Contains("Reals.dfy"))
                 {
                     continue;
@@ -94,12 +279,22 @@ namespace placeholder
             var files = new List<DafnyFile>();
             foreach (var dafnyElement in ImmutableDictionary)
             {
-                var dafnyFile = DafnyFile.CreateAndValidate(reporter, fs, reporter.Options, dafnyElement.Key, Token.NoToken);
+                var dafnyFile = DafnyFile.CreateAndValidate(
+                    reporter,
+                    fs,
+                    reporter.Options,
+                    dafnyElement.Key,
+                    Token.NoToken
+                );
                 files.Add(dafnyFile);
             }
             // Parse the Dafny file and get a program representation
-            var program = new ProgramParser().ParseFiles(methodFile, files,
-                reporter, CancellationToken.None);
+            var program = new ProgramParser().ParseFiles(
+                methodFile,
+                files,
+                reporter,
+                CancellationToken.None
+            );
 
             // Check if there were any errors reported
             var success = !reporter.HasErrors;
@@ -131,8 +326,19 @@ namespace placeholder
                 Console.WriteLine(message);
             }
 
-            var method = FindMethodByName(program, methodName);
-            Console.WriteLine(method);
+            var declaration = FindMethodByName(program, methodName);
+            if (declaration is Method method)
+            {
+                var error = IdentifyPriorityError(method, errors);
+            }
+            else if (declaration is Lemma lemma)
+            {
+                var error = IdentifyPriorityError(lemma, errors);
+            }
+            else
+            {
+                throw new Exception("declaration not supported");
+            }
 
             /* var position = new DafnyPosition(6, 10); */
             /**/
