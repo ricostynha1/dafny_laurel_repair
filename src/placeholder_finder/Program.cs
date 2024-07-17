@@ -13,6 +13,19 @@ using Microsoft.Dafny;
 
 namespace placeholder
 {
+    public enum DafnyErrorType
+    {
+        Assertion,
+        Precondition,
+        Related,
+        Postcondition,
+        LoopInvariant,
+        LHSValue,
+        Forall,
+        Calc,
+        Unknown
+    }
+
     public class DafnyError
     {
         public string File { get; set; }
@@ -20,7 +33,9 @@ namespace placeholder
         public int Column { get; set; }
         public string ErrorMessage { get; set; }
         public string LineContent { get; set; }
+        public DafnyErrorType ErrorType { get; set; }
         public List<DafnyError> RelatedErrors { get; set; } = new List<DafnyError>();
+        public Statement SourceStatement { get; set; }
 
         public override string ToString()
         {
@@ -55,7 +70,8 @@ namespace placeholder
                         File = file,
                         Line = line,
                         Column = column,
-                        ErrorMessage = errorMessage
+                        ErrorMessage = errorMessage,
+                        ErrorType = GetErrorType(errorMessage)
                     };
 
                     var lineContent = string.Empty;
@@ -90,30 +106,63 @@ namespace placeholder
 
             return errorList;
         }
+
+        private static DafnyErrorType GetErrorType(string errorMessage)
+        {
+            if (errorMessage.Contains("assertion might not hold"))
+            {
+                return DafnyErrorType.Assertion;
+            }
+            else if (errorMessage.Contains("precondition for this call could not be proved"))
+            {
+                return DafnyErrorType.Precondition;
+            }
+            else if (errorMessage.Contains("related location"))
+            {
+                return DafnyErrorType.Related;
+            }
+            else
+            {
+                return DafnyErrorType.Unknown;
+            }
+        }
     }
 
-    class ErrorMessageDivider
+    class ErrorLocation
     {
-        public static List<string> DivideErrorMessages(string errorMessages)
+        public string File { get; set; }
+        public int Line { get; set; }
+        public int Column { get; set; }
+
+        public ErrorLocation() { }
+
+        public void FindLocationFromError(DafnyError error)
         {
-            var errors = new List<string>();
-            var error = "";
-            foreach (var line in errorMessages.Split('\n'))
+            switch (error.ErrorType)
             {
-                if (
-                    line.Contains("Dafny program verifier finished with")
-                    || line.Contains("Dafny program verifier failed with")
-                )
-                {
-                    if (error != "")
-                    {
-                        errors.Add(error);
-                    }
-                    error = "";
-                }
-                error += line + "\n";
+                case DafnyErrorType.Assertion:
+                    AssignErrorLocation(error);
+                    break;
+                case DafnyErrorType.Precondition:
+                    AssignErrorLocation(error);
+                    break;
+                // Add cases for other error types
+                default:
+                    throw new ArgumentException("Invalid error type");
             }
-            return errors;
+        }
+
+        public void AssignErrorLocation(DafnyError error)
+        {
+            var token = error.SourceStatement.Tok;
+            this.File = token.filename;
+            this.Line = token.line;
+            this.Column = token.col;
+        }
+
+        public override string ToString()
+        {
+            return $"{File}({Line},{Column})";
         }
     }
 
@@ -144,7 +193,7 @@ namespace placeholder
             return null; // Return null if the method is not found
         }
 
-        public static (Statement, string) IdentifyPriorityError(
+        public static DafnyError IdentifyPriorityError(
             Method method,
             List<DafnyError> errorMessages
         )
@@ -155,25 +204,24 @@ namespace placeholder
                 {
                     if (error.LineContent == statement.ToString())
                     {
-                        return (statement, error.ErrorMessage);
+                        error.SourceStatement = statement;
+                        return error;
                     }
 
                     foreach (var relatedError in error.RelatedErrors)
                     {
                         if (relatedError.LineContent == statement.ToString())
                         {
-                            return (statement, relatedError.ErrorMessage);
+                            error.SourceStatement = statement;
+                            return error;
                         }
                     }
                 }
             }
-            return (null, null);
+            return null;
         }
 
-        public static (Statement, string) IdentifyPriorityError(
-            Lemma lemma,
-            List<DafnyError> errorMessages
-        )
+        public static DafnyError IdentifyPriorityError(Lemma lemma, List<DafnyError> errorMessages)
         {
             foreach (var statement in lemma.Body.Body)
             {
@@ -181,34 +229,21 @@ namespace placeholder
                 {
                     if (error.LineContent == statement.ToString())
                     {
-                        return (statement, error.ErrorMessage);
+                        error.SourceStatement = statement;
+                        return error;
                     }
 
                     foreach (var relatedError in error.RelatedErrors)
                     {
                         if (relatedError.LineContent == statement.ToString())
                         {
-                            return (statement, relatedError.ErrorMessage);
+                            error.SourceStatement = statement;
+                            return error;
                         }
                     }
                 }
             }
-            return (null, null);
-        }
-
-        public static (Statement, string) IdentifyPriorityError(
-            Lemma lemma,
-            List<string> errorMessages
-        )
-        {
-            foreach (var statement in lemma.Body.Body)
-            {
-                if (errorMessages.Contains(statement.ToString()))
-                {
-                    return (statement, statement.ToString());
-                }
-            }
-            return (null, null);
+            return null;
         }
 
         static int Main(string[] args)
@@ -227,16 +262,14 @@ namespace placeholder
             string input;
             input = Console.In.ReadToEnd();
             var errors = ErrorParser.ParseErrors(input);
-            foreach (var error in errors)
+            foreach (var dafnyError in errors)
             {
-                Console.WriteLine(error);
+                Console.WriteLine(dafnyError);
             }
             if (!Path.IsPathRooted(methodFile))
             {
                 methodFile = Path.GetFullPath(methodFile);
             }
-            // Uri uri = new Uri(methodFile);
-            // Console.WriteLine("URI: " + uri);
 
             // Create a URI from the file name
             var uri = new Uri("transcript:///" + methodFile);
@@ -245,13 +278,6 @@ namespace placeholder
             var reporter = new ConsoleErrorReporter(options);
 
             var methodInput = File.ReadAllText(methodFile);
-
-            // Create an in-memory file system with the source code associated with the URI
-
-            // var fs = new InMemoryFileSystem(ImmutableDictionary<Uri, string>.Empty.Add(uri, methodInput));
-
-            // add all the files from src/**/*.dfy
-
 
             // TODO this is a special case for Dafny-VMC --library flag (it should not be needed for the rest)
             var ImmutableDictionary = new Dictionary<Uri, string>();
@@ -274,8 +300,6 @@ namespace placeholder
             }
             var fs = new InMemoryFileSystem(ImmutableDictionary.ToImmutableDictionary());
 
-            // Handle the Dafny file using the in-memory file system and the reporter
-            // var file = DafnyFile.CreateAndValidate(reporter, fs, reporter.Options, uri, Token.NoToken);
             var files = new List<DafnyFile>();
             foreach (var dafnyElement in ImmutableDictionary)
             {
@@ -288,7 +312,6 @@ namespace placeholder
                 );
                 files.Add(dafnyFile);
             }
-            // Parse the Dafny file and get a program representation
             var program = new ProgramParser().ParseFiles(
                 methodFile,
                 files,
@@ -296,26 +319,18 @@ namespace placeholder
                 CancellationToken.None
             );
 
-            // Check if there were any errors reported
             var success = !reporter.HasErrors;
 
-            // If parsing was successful, assign the program to the class-level variable
-            // if (success) {
-            //     dafnyProgram = program;
-            // }
             if (!success)
             {
                 Console.WriteLine("Error reporter: " + reporter.ErrorCount);
                 foreach (var message in reporter.AllMessages)
                 {
-                    Console.WriteLine(message);
+                    throw new Exception("Error parsing method file: " + message);
                 }
                 return 1;
             }
 
-            // open the method file
-
-            // var program = new ProgramParser().Parse(methodInput, uri, errorReporter);
             var resolver = new ProgramResolver(program);
 
             resolver.Resolve(CancellationToken.None);
@@ -327,18 +342,25 @@ namespace placeholder
             }
 
             var declaration = FindMethodByName(program, methodName);
+
+            DafnyError error = null;
+            // TODO put this in a function taking a declaration method
             if (declaration is Method method)
             {
-                var error = IdentifyPriorityError(method, errors);
+                error = IdentifyPriorityError(method, errors);
             }
             else if (declaration is Lemma lemma)
             {
-                var error = IdentifyPriorityError(lemma, errors);
+                error = IdentifyPriorityError(lemma, errors);
             }
             else
             {
                 throw new Exception("declaration not supported");
             }
+
+            var errorLocation = new ErrorLocation();
+            errorLocation.FindLocationFromError(error);
+            Console.WriteLine(errorLocation);
 
             /* var position = new DafnyPosition(6, 10); */
             /**/
