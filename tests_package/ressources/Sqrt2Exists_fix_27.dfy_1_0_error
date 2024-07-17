@@ -1,0 +1,22 @@
+/usr/local/home/eric/dafny_repos/Dafny-VMC/src/Math/Analysis/Sqrt2Exists_fix_15_1.dfy(148,4): Error: a precondition for this call could not be proved
+    |
+148 |     sqrt2 := Reals.DedekindCompleteness(lower, upper);
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/usr/local/home/eric/dafny_repos/Dafny-VMC/src/Math/Analysis/Sqrt2Exists_fix_15_1.dfy(42,13): Related location: this is the precondition that could not be proved
+   |
+42 |     requires lower != iset{}
+   |              ^^^^^^^^^^^^^^^
+
+/usr/local/home/eric/dafny_repos/Dafny-VMC/src/Math/Analysis/Sqrt2Exists_fix_15_1.dfy(150,7): Error: assertion might not hold
+    |
+150 | assert sqrt2 in lower || sqrt2 in upper;
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/usr/local/home/eric/dafny_repos/Dafny-VMC/src/Math/Analysis/Sqrt2Exists_fix_15_1.dfy(151,11): Error: assertion might not hold
+    |
+151 |     assert 1.0 <= sqrt2 <= 2.0;
+    |            ^^^^^^^^^^^^
+
+
+Dafny program verifier finished with 0 verified, 3 errors
