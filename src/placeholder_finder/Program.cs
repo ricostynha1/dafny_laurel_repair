@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.Contracts;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
@@ -121,6 +122,10 @@ namespace placeholder
             {
                 return DafnyErrorType.Related;
             }
+            else if (errorMessage.Contains("a postcondition could not be proved on this return path"))
+            {
+                return DafnyErrorType.Postcondition;
+            }
             else
             {
                 return DafnyErrorType.Unknown;
@@ -146,6 +151,10 @@ namespace placeholder
                 case DafnyErrorType.Precondition:
                     AssignErrorLocation(error);
                     break;
+                case DafnyErrorType.Postcondition:
+                    //TODO: replace by end of path
+                    AssignAfterErrorLocation(error);
+                    break;
                 // Add cases for other error types
                 default:
                     throw new ArgumentException("Invalid error type");
@@ -157,6 +166,13 @@ namespace placeholder
             var token = error.SourceStatement.Tok;
             this.File = token.filename;
             this.Line = token.line;
+            this.Column = token.col;
+        }
+        public void AssignAfterErrorLocation(DafnyError error)
+        {
+            var token = error.SourceStatement.Tok;
+            this.File = token.filename;
+            this.Line = token.line+1;
             this.Column = token.col;
         }
 
@@ -193,79 +209,192 @@ namespace placeholder
             return null; // Return null if the method is not found
         }
 
-        public static DafnyError IdentifyPriorityError(
-            Method method,
-            List<DafnyError> errorMessages
-        )
+        public static DafnyError IdentifyPriorityError(Method method, List<DafnyError> errorMessages)
         {
             foreach (var statement in method.Body.Body)
             {
-                foreach (var error in errorMessages)
+                var error = FindMatchingError(statement, errorMessages);
+                if (error != null)
                 {
-                    if (error.LineContent == statement.ToString())
-                    {
-                        error.SourceStatement = statement;
-                        return error;
-                    }
-
-                    foreach (var relatedError in error.RelatedErrors)
-                    {
-                        if (relatedError.LineContent == statement.ToString())
-                        {
-                            error.SourceStatement = statement;
-                            return error;
-                        }
-                    }
+                    return error;
                 }
             }
+
             return null;
         }
-
         public static DafnyError IdentifyPriorityError(Lemma lemma, List<DafnyError> errorMessages)
         {
             foreach (var statement in lemma.Body.Body)
             {
-                foreach (var error in errorMessages)
+                var error = FindMatchingError(statement, errorMessages);
+                if (error != null)
                 {
-                    if (error.LineContent == statement.ToString())
+                    return error;
+                }
+            }
+
+        return null;
+        }
+
+
+        private static DafnyError FindMatchingError(Statement statement, List<DafnyError> errorMessages)
+        {
+            foreach (var error in errorMessages)
+            {
+                if (error.LineContent == statement.ToString())
+                {
+                    error.SourceStatement = statement;
+                    return error;
+                }
+
+                foreach (var relatedError in error.RelatedErrors)
+                {
+                    if (relatedError.LineContent == statement.ToString())
                     {
                         error.SourceStatement = statement;
                         return error;
                     }
+                }
+            }
 
-                    foreach (var relatedError in error.RelatedErrors)
+            if (statement is BlockStmt blockStmt)
+            {
+                foreach (var subStatement in blockStmt.Body)
+                {
+                    var error = FindMatchingError(subStatement, errorMessages);
+                    if (error != null)
                     {
-                        if (relatedError.LineContent == statement.ToString())
+                        return error;
+                    }
+                }
+            }
+            else if (statement is IfStmt ifStmt)
+            {
+                // Check if the error is within the range of the 'else' token
+                var thenError = FindMatchingError(ifStmt.Thn, errorMessages);
+                if (thenError != null)
+                {
+                    return thenError;
+                }
+
+                var elseError = FindMatchingError(ifStmt.Els, errorMessages);
+                if (elseError != null)
+                {
+                    return elseError;
+                }
+                var elseToken = ifStmt.OwnedTokens.FirstOrDefault(t => t.val == "else");
+                if (elseToken != null)
+                {
+                    foreach (var error in errorMessages)
+                    {
+                        if (error.Line == elseToken.line && error.Column >= elseToken.col && error.Column <= elseToken.col + elseToken.val.Length)
                         {
-                            error.SourceStatement = statement;
+                            error.SourceStatement = ifStmt.Els;
                             return error;
                         }
                     }
                 }
+                //TODO same for if statement?
             }
+            else if (statement is MatchStmt matchStmt)
+            {
+                foreach (var matchCase in matchStmt.Cases)
+                {
+                    foreach (var subStatement in matchCase.Body)
+                    {
+                        var caseError = FindMatchingError(subStatement, errorMessages);
+                        if (caseError != null)
+                        {
+                            return caseError;
+                        }
+                    }
+                }
+            }
+
             return null;
+        }
+
+        public static string[] InsertPlaceholderAtLine(string filename, int line, string placeholder)
+        {
+            var lines = File.ReadAllLines(filename).ToList();
+            lines.Insert(line - 1, placeholder);
+            // File.WriteAllLines(filename, lines);
+            return lines.ToArray();
+        }
+
+
+        public static Dictionary<Uri, string> AddFilesToFs(string methodFile, string additionalFilesDir = "", string blacklistFile = "")
+        {
+            var fileDictionary = new Dictionary<Uri, string>();
+
+            var fileContent = File.ReadAllText(methodFile);
+            var fileUri = new Uri("transcript:///" + methodFile);
+            fileDictionary.Add(fileUri, fileContent);
+
+            // If additionalFilesDir is not empty, add additional files to the dictionary
+            if (!string.IsNullOrEmpty(additionalFilesDir))
+            {
+            string searchPattern = "*.dfy";
+            string directoryPath = additionalFilesDir;
+            SearchOption searchOption = SearchOption.AllDirectories;
+
+            if (additionalFilesDir.Contains("**"))
+            {
+                // If '**' is present, adjust the directory path and set the search option to AllDirectories
+                directoryPath = additionalFilesDir.Substring(0, additionalFilesDir.IndexOf("**"));
+            }
+                foreach (string fileInclude in Directory.EnumerateFiles(directoryPath, searchPattern, searchOption))
+                {
+                    // If blacklistFile is not empty and the current file matches it, skip this file
+                    if (!string.IsNullOrEmpty(blacklistFile) && fileInclude.Contains(blacklistFile))
+                    {
+                        continue;
+                    }
+
+                    fileContent = File.ReadAllText(fileInclude);
+                    fileUri = new Uri("transcript:///" + fileInclude);
+                    fileDictionary.Add(fileUri, fileContent);
+                }
+            }
+
+            return fileDictionary;
         }
 
         static int Main(string[] args)
         {
-            TextWriter output = Console.Out;
+            TextWriter output = Console.Error;
             DafnyOptions options = DafnyOptions.Create(output);
             BatchErrorReporter errorReporter = new BatchErrorReporter(options);
-            if (args.Length != 2)
+            var methodFile = "";
+            var methodName = "";
+            var additionnalInclude = "";
+            var blacklistedFile = "";
+            if (args.Length < 2)
             {
-                Console.WriteLine("Usage: Program <method_file> <method_name>");
+                Console.WriteLine("Usage: Program <method_file> <method_name> [optional_third_arg]");
                 return 0;
             }
+            else if (args.Length == 4)
+            {
+                methodFile = args[0];
+                methodName = args[1];
+                additionnalInclude = args[2];
+                blacklistedFile = args[3];
+            }
+            else if (args.Length == 3)
+            {
+                methodFile = args[0];
+                methodName = args[1];
+                additionnalInclude = args[2];
+            }
+            else
+            {
+                methodFile = args[0];
+                methodName = args[1];
+            }
 
-            string methodFile = args[0];
-            string methodName = args[1];
             string input;
             input = Console.In.ReadToEnd();
-            var errors = ErrorParser.ParseErrors(input);
-            foreach (var dafnyError in errors)
-            {
-                Console.WriteLine(dafnyError);
-            }
             if (!Path.IsPathRooted(methodFile))
             {
                 methodFile = Path.GetFullPath(methodFile);
@@ -277,31 +406,11 @@ namespace placeholder
             // Initialize an error reporter to report errors to the console
             var reporter = new ConsoleErrorReporter(options);
 
-            var methodInput = File.ReadAllText(methodFile);
-
-            // TODO this is a special case for Dafny-VMC --library flag (it should not be needed for the rest)
-            var ImmutableDictionary = new Dictionary<Uri, string>();
-            foreach (
-                string fileInclude in Directory.EnumerateFiles(
-                    "/usr/local/home/eric/dafny_repos/Dafny-VMC/src",
-                    "*.dfy",
-                    SearchOption.AllDirectories
-                )
-            )
-            {
-                // everything except Reals.dfy
-                if (fileInclude.Contains("Reals.dfy"))
-                {
-                    continue;
-                }
-                var fileContent = File.ReadAllText(fileInclude);
-                var fileUri = new Uri("transcript:///" + fileInclude);
-                ImmutableDictionary.Add(fileUri, fileContent);
-            }
-            var fs = new InMemoryFileSystem(ImmutableDictionary.ToImmutableDictionary());
+            var filesDict = AddFilesToFs(methodFile, additionnalInclude, blacklistedFile);
 
             var files = new List<DafnyFile>();
-            foreach (var dafnyElement in ImmutableDictionary)
+            var fs = new InMemoryFileSystem(filesDict);
+            foreach (var dafnyElement in filesDict)
             {
                 var dafnyFile = DafnyFile.CreateAndValidate(
                     reporter,
@@ -319,6 +428,12 @@ namespace placeholder
                 CancellationToken.None
             );
 
+
+            var resolver = new ProgramResolver(program);
+
+            resolver.Resolve(CancellationToken.None);
+
+
             var success = !reporter.HasErrors;
 
             if (!success)
@@ -326,23 +441,14 @@ namespace placeholder
                 Console.WriteLine("Error reporter: " + reporter.ErrorCount);
                 foreach (var message in reporter.AllMessages)
                 {
-                    throw new Exception("Error parsing method file: " + message);
+                    throw new Exception("Error parsing or reporting method file: " + message);
                 }
                 return 1;
             }
 
-            var resolver = new ProgramResolver(program);
-
-            resolver.Resolve(CancellationToken.None);
-
-            Console.WriteLine("Error reporter: " + errorReporter.ErrorCount);
-            foreach (var message in errorReporter.AllMessages)
-            {
-                Console.WriteLine(message);
-            }
-
             var declaration = FindMethodByName(program, methodName);
 
+            var errors = ErrorParser.ParseErrors(input);
             DafnyError error = null;
             // TODO put this in a function taking a declaration method
             if (declaration is Method method)
@@ -360,7 +466,20 @@ namespace placeholder
 
             var errorLocation = new ErrorLocation();
             errorLocation.FindLocationFromError(error);
-            Console.WriteLine(errorLocation);
+
+            // get method lines and insert placeholder
+            var method_start_line = declaration.tok.line;
+            var method_end_line = declaration.EndToken.line;
+            var file_to_modify = declaration.tok.Filepath;
+
+            var modified_files = InsertPlaceholderAtLine(file_to_modify, errorLocation.Line, "<assertion> Insert assertion here </assertion>");
+
+            // Extract the method
+            var method_lines = modified_files[(method_start_line - 1)..(method_end_line + 1)];
+            // Write method lines to stdout
+            Console.WriteLine(string.Join("\n", method_lines));
+
+
 
             /* var position = new DafnyPosition(6, 10); */
             /**/
@@ -372,7 +491,6 @@ namespace placeholder
 
             // static Graph<Function> BuildFunctionCallGraph(Dafny.Program program)
 
-            Console.WriteLine("DONE");
             return 0;
         }
     }
