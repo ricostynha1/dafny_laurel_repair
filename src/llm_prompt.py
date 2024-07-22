@@ -88,6 +88,8 @@ class Llm_prompt:
         feedback,
         example_selector,
         threshold,
+        dafny_args,
+        original_method_file,
     ):
         with open(program_to_fix, "r") as f:
             content = f.read()
@@ -116,7 +118,20 @@ class Llm_prompt:
 
         method_to_insert = method
         if config_prompt["Placeholder"]:
-            method_to_insert = insert_assertion_location(error_message, method, content)
+            if "--library" in dafny_args:
+                # extract the files url after --library in such a string "--library /usr/local/home/eric/dafny_repos/Dafny-VMC/src/**/*.dfy --resource-limit 20000"
+                library_files = dafny_args.split("--library")[1].split("--")[0].strip()
+                method_to_insert = insert_assertion_location(
+                    error_message,
+                    program_to_fix,
+                    method_name,
+                    optional_files=library_files,
+                    original_method_file=original_method_file,
+                )
+            else:
+                method_to_insert = insert_assertion_location(
+                    error_message, program_to_fix, method_name
+                )
         fix_prompt = config_prompt["Fix_prompt"]
         question = f"{fix_prompt}\n <method> {method_to_insert} </method>"
         if feedback:

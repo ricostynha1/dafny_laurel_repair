@@ -104,6 +104,8 @@ def generate_fix_llm(
                 pruning_file,
                 method.index,
             )
+            # TODO: check but the original_method_file is just the path to the method without the assertion
+            # # the actual original_method_file is row["Original File"]
             success = process_method(
                 method,
                 config,
@@ -112,6 +114,7 @@ def generate_fix_llm(
                 csv_writer,
                 notebook_url,
                 examples_selectors,
+                row["Original File"],
             )
             success_count += 1 if success else 0
         except Exception as e:
@@ -146,7 +149,14 @@ def insert_assertion(method_with_placeholder, original_method, fix_prompt, try_n
     return new_method, diff
 
 
-def generate_prompts(prompt_index, config_prompt, examples_selectors, method, config):
+def generate_prompts(
+    prompt_index,
+    config_prompt,
+    examples_selectors,
+    method,
+    config,
+    unmodified_method_path,
+):
     threshold = config_prompt.get("Context", {}).get("Threshold", 0)
 
     llm_prompt = Llm_prompt(
@@ -167,6 +177,8 @@ def generate_prompts(prompt_index, config_prompt, examples_selectors, method, co
         method.entire_error_message if config_prompt["Feedback"] else None,
         examples_selectors[prompt_index - 1],
         threshold,
+        config.get("Dafny_args", ""),
+        unmodified_method_path,
     )
 
     new_prompts = llm_prompt.get_n_fixes(
@@ -184,6 +196,7 @@ def process_method(
     csv_writer,
     notebook_url,
     examples_selectors,
+    unmodified_method_path,
 ):
     success = False
     logger.info("+--------------------------------------+")
@@ -193,7 +206,12 @@ def process_method(
     diff = ""
     for prompt_index, config_prompt in enumerate(config["Prompts"], start=1):
         new_prompts, method_with_placeholder = generate_prompts(
-            prompt_index, config_prompt, examples_selectors, method, config
+            prompt_index,
+            config_prompt,
+            examples_selectors,
+            method,
+            config,
+            unmodified_method_path,
         )
         for i, prompt in enumerate(new_prompts, start=1):
             try:

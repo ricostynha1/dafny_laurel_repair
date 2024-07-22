@@ -122,7 +122,9 @@ namespace placeholder
             {
                 return DafnyErrorType.Related;
             }
-            else if (errorMessage.Contains("a postcondition could not be proved on this return path"))
+            else if (
+                errorMessage.Contains("a postcondition could not be proved on this return path")
+            )
             {
                 return DafnyErrorType.Postcondition;
             }
@@ -168,11 +170,12 @@ namespace placeholder
             this.Line = token.line;
             this.Column = token.col;
         }
+
         public void AssignAfterErrorLocation(DafnyError error)
         {
             var token = error.SourceStatement.Tok;
             this.File = token.filename;
-            this.Line = token.line+1;
+            this.Line = token.line + 1;
             this.Column = token.col;
         }
 
@@ -209,7 +212,10 @@ namespace placeholder
             return null; // Return null if the method is not found
         }
 
-        public static DafnyError IdentifyPriorityError(Method method, List<DafnyError> errorMessages)
+        public static DafnyError IdentifyPriorityError(
+            Method method,
+            List<DafnyError> errorMessages
+        )
         {
             foreach (var statement in method.Body.Body)
             {
@@ -222,6 +228,7 @@ namespace placeholder
 
             return null;
         }
+
         public static DafnyError IdentifyPriorityError(Lemma lemma, List<DafnyError> errorMessages)
         {
             foreach (var statement in lemma.Body.Body)
@@ -233,11 +240,13 @@ namespace placeholder
                 }
             }
 
-        return null;
+            return null;
         }
 
-
-        private static DafnyError FindMatchingError(Statement statement, List<DafnyError> errorMessages)
+        private static DafnyError FindMatchingError(
+            Statement statement,
+            List<DafnyError> errorMessages
+        )
         {
             foreach (var error in errorMessages)
             {
@@ -287,7 +296,11 @@ namespace placeholder
                 {
                     foreach (var error in errorMessages)
                     {
-                        if (error.Line == elseToken.line && error.Column >= elseToken.col && error.Column <= elseToken.col + elseToken.val.Length)
+                        if (
+                            error.Line == elseToken.line
+                            && error.Column >= elseToken.col
+                            && error.Column <= elseToken.col + elseToken.val.Length
+                        )
                         {
                             error.SourceStatement = ifStmt.Els;
                             return error;
@@ -314,7 +327,11 @@ namespace placeholder
             return null;
         }
 
-        public static string[] InsertPlaceholderAtLine(string filename, int line, string placeholder)
+        public static string[] InsertPlaceholderAtLine(
+            string filename,
+            int line,
+            string placeholder
+        )
         {
             var lines = File.ReadAllLines(filename).ToList();
             lines.Insert(line - 1, placeholder);
@@ -322,28 +339,40 @@ namespace placeholder
             return lines.ToArray();
         }
 
-
-        public static Dictionary<Uri, string> AddFilesToFs(string methodFile, string additionalFilesDir = "", string blacklistFile = "")
+        public static Dictionary<Uri, string> AddFilesToFs(
+            string methodFile,
+            string additionalFilesDir = "",
+            string blacklistFile = ""
+        )
         {
             var fileDictionary = new Dictionary<Uri, string>();
 
             var fileContent = File.ReadAllText(methodFile);
-            var fileUri = new Uri("transcript:///" + methodFile);
-            fileDictionary.Add(fileUri, fileContent);
+            var baseMethodUri = new Uri("transcript:///" + methodFile);
+            fileDictionary.Add(baseMethodUri, fileContent);
 
             // If additionalFilesDir is not empty, add additional files to the dictionary
             if (!string.IsNullOrEmpty(additionalFilesDir))
             {
-            string searchPattern = "*.dfy";
-            string directoryPath = additionalFilesDir;
-            SearchOption searchOption = SearchOption.AllDirectories;
+                string searchPattern = "*.dfy";
+                string directoryPath = additionalFilesDir;
+                SearchOption searchOption = SearchOption.AllDirectories;
 
-            if (additionalFilesDir.Contains("**"))
-            {
-                // If '**' is present, adjust the directory path and set the search option to AllDirectories
-                directoryPath = additionalFilesDir.Substring(0, additionalFilesDir.IndexOf("**"));
-            }
-                foreach (string fileInclude in Directory.EnumerateFiles(directoryPath, searchPattern, searchOption))
+                if (additionalFilesDir.Contains("**"))
+                {
+                    // If '**' is present, adjust the directory path and set the search option to AllDirectories
+                    directoryPath = additionalFilesDir.Substring(
+                        0,
+                        additionalFilesDir.IndexOf("**")
+                    );
+                }
+                foreach (
+                    string fileInclude in Directory.EnumerateFiles(
+                        directoryPath,
+                        searchPattern,
+                        searchOption
+                    )
+                )
                 {
                     // If blacklistFile is not empty and the current file matches it, skip this file
                     if (!string.IsNullOrEmpty(blacklistFile) && fileInclude.Contains(blacklistFile))
@@ -352,8 +381,12 @@ namespace placeholder
                     }
 
                     fileContent = File.ReadAllText(fileInclude);
-                    fileUri = new Uri("transcript:///" + fileInclude);
-                    fileDictionary.Add(fileUri, fileContent);
+                    var fileUri = new Uri("transcript:///" + fileInclude);
+
+                    if (!fileDictionary.ContainsKey(fileUri))
+                    {
+                        fileDictionary.Add(fileUri, fileContent);
+                    }
                 }
             }
 
@@ -371,7 +404,9 @@ namespace placeholder
             var blacklistedFile = "";
             if (args.Length < 2)
             {
-                Console.WriteLine("Usage: Program <method_file> <method_name> [optional_third_arg]");
+                Console.WriteLine(
+                    "Usage: Program <method_file> <method_name> [optional_third_arg]"
+                );
                 return 0;
             }
             else if (args.Length == 4)
@@ -428,11 +463,9 @@ namespace placeholder
                 CancellationToken.None
             );
 
-
             var resolver = new ProgramResolver(program);
 
             resolver.Resolve(CancellationToken.None);
-
 
             var success = !reporter.HasErrors;
 
@@ -461,7 +494,7 @@ namespace placeholder
             }
             else
             {
-                throw new Exception("declaration not supported");
+                throw new Exception("declaration not supported: " + declaration.GetType());
             }
 
             var errorLocation = new ErrorLocation();
@@ -472,14 +505,16 @@ namespace placeholder
             var method_end_line = declaration.EndToken.line;
             var file_to_modify = declaration.tok.Filepath;
 
-            var modified_files = InsertPlaceholderAtLine(file_to_modify, errorLocation.Line, "<assertion> Insert assertion here </assertion>");
+            var modified_files = InsertPlaceholderAtLine(
+                file_to_modify,
+                errorLocation.Line,
+                "<assertion> Insert assertion here </assertion>"
+            );
 
             // Extract the method
             var method_lines = modified_files[(method_start_line - 1)..(method_end_line + 1)];
             // Write method lines to stdout
             Console.WriteLine(string.Join("\n", method_lines));
-
-
 
             /* var position = new DafnyPosition(6, 10); */
             /**/

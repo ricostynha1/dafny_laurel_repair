@@ -1,43 +1,66 @@
 import re
 
 from utils import extract_line_from_file_content
+from placeholder_wrapper import call_placeholder_finder
 
 assertion_placeholder = "\n<assertion> Insert assertion here </assertion>\n"
+
+# def call_placeholder_finder(
+#     error_message, method_file, method_name, optional_files=None, blacklisted_file=None
+# ):
+
+
+# mae an equivalent to insert assertion location that just returnt the method with the placeholder
+def insert_assertion_location(
+    message,
+    method_file,
+    method_name,
+    optional_files=None,
+    original_method_file=None,
+):
+    method_with_placeholder = call_placeholder_finder(
+        message,
+        method_file,
+        method_name,
+        optional_files=optional_files,
+        blacklisted_file=original_method_file,
+    )
+    return method_with_placeholder
 
 
 ## Take a dafny error message
 ## Extract the location at which the assertion should be added
 ## @Param error_message
 # @Return line
-def insert_assertion_location(message, method, file_content):
-    error_message_only = remove_warning(message)
-    match error_message_only:
-        # "assertion might not hold" should always be first as fixing an assertion can fix other kinds of verification errors
-        case _ if "assertion might not hold" in error_message_only:
-            return handle_assertion_might_not_hold(
-                error_message_only, method, file_content
-            )
-        case (
-            _
-        ) if "precondition for this call could not be proved" in error_message_only:
-            return handle_precondition_not_proved(
-                error_message_only, method, file_content
-            )
-        case _ if "postcondition could not be proved" in error_message_only:
-            return handle_postcondition_not_proved(
-                error_message_only, method, file_content
-            )
-        case _ if "possible violation of postcondition of forall" in error_message_only:
-            return handle_possible_violation_postcondition_forall(
-                method, error_message_only, file_content
-            )
-        case _ if "cannot establish the existence of LHS values" in error_message_only:
-            return handle_cannot_establish_lhs(method, error_message_only, file_content)
-        # TODO what we do for Timeout
-        case _:
-            raise Exception(
-                f"Type of error message not supported: {error_message_only}"
-            )
+# def insert_assertion_location(message, method, file_content):
+#     error_message_only = remove_warning(message)
+#     match error_message_only:
+#         # "assertion might not hold" should always be first as fixing an assertion can fix other kinds of verification errors
+#         case _ if "assertion might not hold" in error_message_only:
+#             return handle_assertion_might_not_hold(
+#                 error_message_only, method, file_content
+#             )
+#         case (
+#             _
+#         ) if "precondition for this call could not be proved" in error_message_only:
+#             return handle_precondition_not_proved(
+#                 error_message_only, method, file_content
+#             )
+#         case _ if "postcondition could not be proved" in error_message_only:
+#             return handle_postcondition_not_proved(
+#                 error_message_only, method, file_content
+#             )
+#         case _ if "possible violation of postcondition of forall" in error_message_only:
+#             return handle_possible_violation_postcondition_forall(
+#                 method, error_message_only, file_content
+#             )
+#         case _ if "cannot establish the existence of LHS values" in error_message_only:
+#             return handle_cannot_establish_lhs(method, error_message_only, file_content)
+#         # TODO what we do for Timeout
+#         case _:
+#             raise Exception(
+#                 f"Type of error message not supported: {error_message_only}"
+#             )
 
 
 def handle_cannot_establish_lhs(method, error_message, file_content):

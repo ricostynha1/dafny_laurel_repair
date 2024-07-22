@@ -48,9 +48,11 @@ class TestsLLM(unittest.TestCase):
         with open(error_file, "r") as file:
             error_message = file.read()
 
+        new_method_path = "/usr/local/home/eric/dafny_repos/Dafny-VMC/src/Math/Analysis/Sqrt2Exists_fix_27.dfy"
+        shutil.copy(method_file, new_method_path)
         output = call_placeholder_finder(
             error_message,
-            method_file,
+            new_method_path,
             method_name,
             optional_files="/usr/local/home/eric/dafny_repos/Dafny-VMC/src/**/*.dfy",
             blacklisted_file="Reals.dfy",
