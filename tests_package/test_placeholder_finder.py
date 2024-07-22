@@ -9,15 +9,18 @@ from src.placeholder_wrapper import call_placeholder_finder
 class TestsLLM(unittest.TestCase):
     def test_placeholder_finder_multiple_errors(self):
         error_file = "./tests_package/ressources/LemmaMaxOfConcat_fix_74.dfy_10_0_error"
+        result_file = "./tests_package/ressources/LemmaMaxOfConcat_fix_74.dfy_output"
         method_name = "LemmaMaxOfConcat"
         with open(error_file, "r") as file:
             error_message = file.read()
 
         new_method_path = "/usr/local/home/eric/dafny_repos/libraries/src/Collections/Sequences/LemmaMaxOfConcat_fix_74.dfy"
 
-        call_placeholder_finder(error_message, new_method_path, method_name)
+        output = call_placeholder_finder(error_message, new_method_path, method_name)
+        with open(result_file, "r") as file:
+            expected_output = file.read()
 
-        self.assertEqual("", "")
+        self.assertEqual(expected_output, output)
 
     def test_placeholder_finder_multiple_locations(self):
         error_file = "./tests_package/ressources/LemmaSeqPrefixNeq_fix_51.dfy_1_0_error"
@@ -36,9 +39,6 @@ class TestsLLM(unittest.TestCase):
             expected_output = file.read()
 
         self.assertEqual(output, expected_output)
-        # os.remove(new_method_path)
-
-        self.assertEqual("", "")
 
     def test_placeholder_finder_dependencies(self):
         error_file = "./tests_package/ressources/Sqrt2Exists_fix_27.dfy_1_0_error"
@@ -60,4 +60,3 @@ class TestsLLM(unittest.TestCase):
             expected_output = file.read()
 
         self.assertEqual(output, expected_output)
-        self.assertEqual("", "")
