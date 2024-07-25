@@ -17,6 +17,7 @@ namespace placeholder
     public enum DafnyErrorType
     {
         Assertion,
+        AssertBy,
         Precondition,
         Related,
         Postcondition,
@@ -42,6 +43,15 @@ namespace placeholder
         {
             string relatedErrorsStr = string.Join("\n", RelatedErrors);
             return $"File: {File}, Line: {Line}, Column: {Column}, Error: {ErrorMessage}, Content: {LineContent}\nRelated Errors:\n{relatedErrorsStr}";
+        }
+
+        public Node findStatementNode(Program program, Uri uri)
+        {
+            var position = new DafnyPosition(this.Line - 1, this.Column);
+            var listNode = program.FindNodeChain(position, (INode node) => node is Statement);
+            var node_assert = program.FindNode<Statement>(uri, position);
+            this.SourceStatement = node_assert;
+            return this.SourceStatement;
         }
     }
 
@@ -81,6 +91,13 @@ namespace placeholder
                         lineContent = lines[i + 2].Substring(lines[i + 2].IndexOf('|') + 1).Trim();
                     }
                     newError.LineContent = lineContent;
+                    if (
+                        newError.ErrorType == DafnyErrorType.Assertion
+                        && newError.LineContent.EndsWith("by {")
+                    )
+                    {
+                        newError.ErrorType = DafnyErrorType.AssertBy;
+                    }
 
                     if (currentError != null && errorMessage.Contains("Related location"))
                     {
@@ -128,6 +145,30 @@ namespace placeholder
             {
                 return DafnyErrorType.Postcondition;
             }
+            else if (
+                errorMessage.Contains(
+                    "cannot establish the existence of LHS values that satisfy the such-that predicate"
+                )
+            )
+            {
+                return DafnyErrorType.LHSValue;
+            }
+            else if (errorMessage.Contains("this invariant could not be proved to be"))
+            {
+                return DafnyErrorType.LoopInvariant;
+            }
+            else if (errorMessage.Contains("possible violation of postcondition of forall"))
+            {
+                return DafnyErrorType.Forall;
+            }
+            else if (
+                errorMessage.Contains(
+                    "the calculation step between the previous line and this line could not be proved"
+                )
+            )
+            {
+                return DafnyErrorType.Calc;
+            }
             else
             {
                 return DafnyErrorType.Unknown;
@@ -154,10 +195,20 @@ namespace placeholder
                     AssignErrorLocation(error);
                     break;
                 case DafnyErrorType.Postcondition:
-                    //TODO: replace by end of path
-                    AssignAfterErrorLocation(error);
+                    AssignAtEndOfBlock(error);
                     break;
-                // Add cases for other error types
+                case DafnyErrorType.LHSValue:
+                    AssignErrorLocation(error);
+                    break;
+                case DafnyErrorType.AssertBy:
+                    AssignAtEndOfBlock(error);
+                    break;
+                case DafnyErrorType.Forall:
+                    AssignAtEndOfBlock(error);
+                    break;
+                case DafnyErrorType.Calc:
+                    AssignErrorLocation(error);
+                    break;
                 default:
                     throw new ArgumentException("Invalid error type");
             }
@@ -166,6 +217,14 @@ namespace placeholder
         public void AssignErrorLocation(DafnyError error)
         {
             var token = error.SourceStatement.Tok;
+            this.File = token.filename;
+            this.Line = token.line;
+            this.Column = token.col;
+        }
+
+        public void AssignAtEndOfBlock(DafnyError error)
+        {
+            var token = error.SourceStatement.EndToken;
             this.File = token.filename;
             this.Line = token.line;
             this.Column = token.col;
@@ -213,17 +272,16 @@ namespace placeholder
         }
 
         public static DafnyError IdentifyPriorityError(
+            Uri uri,
+            Program program,
             Method method,
             List<DafnyError> errorMessages
         )
         {
-            foreach (var statement in method.Body.Body)
+            var error = FindMatchingError(method.Body, errorMessages);
+            if (error != null)
             {
-                var error = FindMatchingError(statement, errorMessages);
-                if (error != null)
-                {
-                    return error;
-                }
+                return error;
             }
 
             return null;
@@ -231,13 +289,10 @@ namespace placeholder
 
         public static DafnyError IdentifyPriorityError(Lemma lemma, List<DafnyError> errorMessages)
         {
-            foreach (var statement in lemma.Body.Body)
+            var error = FindMatchingError(lemma.Body, errorMessages);
+            if (error != null)
             {
-                var error = FindMatchingError(statement, errorMessages);
-                if (error != null)
-                {
-                    return error;
-                }
+                return error;
             }
 
             return null;
@@ -250,18 +305,16 @@ namespace placeholder
         {
             foreach (var error in errorMessages)
             {
-                if (error.LineContent == statement.ToString())
+                if (error.SourceStatement.Tok.line == statement.Tok.line)
                 {
-                    error.SourceStatement = statement;
                     return error;
                 }
 
                 foreach (var relatedError in error.RelatedErrors)
                 {
-                    if (relatedError.LineContent == statement.ToString())
+                    if (relatedError.SourceStatement == statement)
                     {
-                        error.SourceStatement = statement;
-                        return error;
+                        return relatedError;
                     }
                 }
             }
@@ -286,10 +339,13 @@ namespace placeholder
                     return thenError;
                 }
 
-                var elseError = FindMatchingError(ifStmt.Els, errorMessages);
-                if (elseError != null)
+                if (ifStmt.Els != null)
                 {
-                    return elseError;
+                    var elseError = FindMatchingError(ifStmt.Els, errorMessages);
+                    if (elseError != null)
+                    {
+                        return elseError;
+                    }
                 }
                 var elseToken = ifStmt.OwnedTokens.FirstOrDefault(t => t.val == "else");
                 if (elseToken != null)
@@ -320,6 +376,33 @@ namespace placeholder
                         {
                             return caseError;
                         }
+                    }
+                }
+            }
+            else if (statement is ForallStmt forallStmt)
+            {
+                var error = FindMatchingError(forallStmt.Body, errorMessages);
+                if (error != null)
+                {
+                    return error;
+                }
+            }
+            else if (statement is WhileStmt whileStmt)
+            {
+                var error = FindMatchingError(whileStmt.Body, errorMessages);
+                if (error != null)
+                {
+                    return error;
+                }
+            }
+            else if (statement is AssertStmt assertStmt)
+            {
+                foreach (var substatement in assertStmt.SubStatements)
+                {
+                    var error = FindMatchingError(substatement, errorMessages);
+                    if (error != null)
+                    {
+                        return error;
                     }
                 }
             }
@@ -480,13 +563,34 @@ namespace placeholder
             }
 
             var declaration = FindMethodByName(program, methodName);
+            if (declaration == null)
+            {
+                throw new Exception("Method not found: " + methodName);
+            }
 
             var errors = ErrorParser.ParseErrors(input);
+            if (errors.Count == 0)
+            {
+                throw new Exception("No errors found in input: {input}");
+            }
+            else
+            {
+                foreach (var error_dfy in errors)
+                {
+                    error_dfy.findStatementNode(program, uri);
+                    if (error_dfy.RelatedErrors.Count > 0)
+                    {
+                        foreach (var relatedError in error_dfy.RelatedErrors)
+                        {
+                            relatedError.findStatementNode(program, uri);
+                        }
+                    }
+                }
+            }
             DafnyError error = null;
-            // TODO put this in a function taking a declaration method
             if (declaration is Method method)
             {
-                error = IdentifyPriorityError(method, errors);
+                error = IdentifyPriorityError(uri, program, method, errors);
             }
             else if (declaration is Lemma lemma)
             {
@@ -495,6 +599,11 @@ namespace placeholder
             else
             {
                 throw new Exception("declaration not supported: " + declaration.GetType());
+            }
+
+            if (error == null)
+            {
+                throw new Exception("No error found matching!!");
             }
 
             var errorLocation = new ErrorLocation();

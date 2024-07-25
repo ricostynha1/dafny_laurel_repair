@@ -1,0 +1,7 @@
+/usr/local/home/eric/dafny_repos/Dafny-VMC/src/ProbabilisticProgramming/LiftInEventSpaceToResultEventSpace_fix_87.dfy(149,11): Error: assertion might not hold
+    |
+149 |     assert Rests(results) in Rand.eventSpace by {
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Dafny program verifier finished with 0 verified, 1 error

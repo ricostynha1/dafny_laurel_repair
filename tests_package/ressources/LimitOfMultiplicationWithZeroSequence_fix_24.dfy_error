@@ -1,0 +1,7 @@
+/usr/local/home/eric/dafny_repos/Dafny-VMC/src/Math/Analysis/LimitOfMultiplicationWithZeroSequence_fix_24.dfy(240,18): Error: cannot establish the existence of LHS values that satisfy the such-that predicate
+    |
+240 |             var N :| SuffixIsClose(zeroSeq, 0.0, epsilon', N);
+    |                   ^^
+
+
+Dafny program verifier finished with 0 verified, 1 error

@@ -19,7 +19,7 @@ def insert_assertion_location(
     original_method_file=None,
 ):
     method_with_placeholder = call_placeholder_finder(
-        message,
+        remove_warning(message),
         method_file,
         method_name,
         optional_files=optional_files,

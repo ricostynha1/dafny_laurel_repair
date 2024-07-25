@@ -23,6 +23,7 @@ def call_placeholder_finder(
             command, input=error_message, capture_output=True, text=True, check=True
         )
     except subprocess.CalledProcessError as e:
+        print(e.stdout)
         logger.error(f"Error in call_placeholder_finder: {str(e.stderr)}")
         logger.error(
             f"Arguments were: method_file={method_file}, method_name={method_name}, optional_files={optional_files}, blacklisted_file={blacklisted_file}"

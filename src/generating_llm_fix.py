@@ -201,6 +201,11 @@ def process_method(
     success = False
     logger.info("+--------------------------------------+")
     method.run_verification(config["Results_dir"], config.get("Dafny_args", ""))
+    if method.verification_result == "Correct":
+        logger.info(f"Method {method.method_name} already verified")
+        method.move_to_results_directory(os.path.dirname(original_file_location))
+        return True
+    logger.info(f"Method verification result: {method.verification_result}")
     logger.debug(method)
     new_method = None
     diff = ""
@@ -258,7 +263,8 @@ def process_method(
                 if new_method.entire_error_message is not None:
                     new_error = remove_warning(new_method.entire_error_message)
                 if (
-                    not compare_errormessage(previous_error, new_error)
+                    new_error != ""
+                    and not compare_errormessage(previous_error, new_error)
                     and config_prompt["Error_feedback"]
                 ):
                     logger.info(f"Try feedback with prompt {prompt_index} ")
@@ -329,6 +335,9 @@ def process_method(
                     notebook_url,
                     csv_writer,
                 )
+    method.move_to_results_directory(os.path.dirname(original_file_location))
+    if new_method is not None:
+        new_method.move_to_results_directory(config["Results_dir"])
     return success
 
 
