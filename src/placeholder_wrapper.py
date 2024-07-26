@@ -7,12 +7,18 @@ logger = logging.getLogger(__name__)
 
 
 def call_placeholder_finder(
-    error_message, method_file, method_name, optional_files=None, blacklisted_file=None
+    error_message,
+    method_file,
+    method_name,
+    optional_files=None,
+    blacklisted_file=None,
+    multiple_locations=False,
 ):
     command = [
         os.path.join(os.path.dirname(__file__), PLACEHOLDER_CSHARP_PATH),
         method_file,
         method_name,
+        str(multiple_locations),
     ]
     if optional_files:
         command.append(optional_files)

@@ -184,21 +184,22 @@ namespace placeholder
 
         public ErrorLocation() { }
 
-        public void FindLocationFromError(DafnyError error)
+        public List<ErrorLocation> FindLocationFromError(Uri uri, Program program, DafnyError error, bool multiple_location)
         {
+            var errorLocations = new List<ErrorLocation>();
             switch (error.ErrorType)
             {
                 case DafnyErrorType.Assertion:
-                    AssignErrorLocation(error);
+                    AssignErrorLocation(uri, program, error, multiple_location);
                     break;
                 case DafnyErrorType.Precondition:
-                    AssignErrorLocation(error);
+                    errorLocations = AssignErrorLocation(uri, program, error, multiple_location);
                     break;
                 case DafnyErrorType.Postcondition:
                     AssignAtEndOfBlock(error);
                     break;
                 case DafnyErrorType.LHSValue:
-                    AssignErrorLocation(error);
+                    AssignErrorLocation(uri, program, error, multiple_location);
                     break;
                 case DafnyErrorType.AssertBy:
                     AssignAtEndOfBlock(error);
@@ -207,19 +208,60 @@ namespace placeholder
                     AssignAtEndOfBlock(error);
                     break;
                 case DafnyErrorType.Calc:
-                    AssignErrorLocation(error);
+                    AssignErrorLocation(uri, program, error, multiple_location);
                     break;
                 default:
                     throw new ArgumentException("Invalid error type");
             }
+            return errorLocations;
         }
 
-        public void AssignErrorLocation(DafnyError error)
+        public List<ErrorLocation> AssignErrorLocation(Uri uri, Program program, DafnyError error, bool multiple_location)
         {
+            var errorLocations = new List<ErrorLocation>();
             var token = error.SourceStatement.Tok;
             this.File = token.filename;
             this.Line = token.line;
             this.Column = token.col;
+            if (multiple_location)
+            {
+                var position = new DafnyPosition(token.line - 1, token.col);
+                var listNode = program.FindNodeChain(position, (INode node) => node is Statement);
+                var node = listNode.Data;
+                while (node != null)
+                {
+                    if (node is BlockStmt blockStatement)
+                    {
+                        break;
+                    }
+                    listNode = listNode.Next;
+                    node = listNode?.Data;
+                }
+                // check if the block statement contains a if statement
+                foreach (var statement in ((BlockStmt)node).Body)
+                {
+                    if (statement is IfStmt ifStatement)
+                    {
+                        var thenErrorLocation = new ErrorLocation {
+                            File = token.filename,
+                            Line = ifStatement.Thn.EndToken.line,
+                            Column = ifStatement.Thn.EndToken.col
+                        };
+                    errorLocations.Add(thenErrorLocation);
+
+                    if (ifStatement.Els != null)
+                    {
+                        var elseErrorLocation = new ErrorLocation {
+                            File = token.filename,
+                            Line = ifStatement.Els.EndToken.line,
+                            Column = ifStatement.Els.EndToken.col
+                        };
+                        errorLocations.Add(elseErrorLocation);
+                    }
+                    }
+                }
+            }
+            return errorLocations;
         }
 
         public void AssignAtEndOfBlock(DafnyError error)
@@ -410,16 +452,15 @@ namespace placeholder
             return null;
         }
 
-        public static string[] InsertPlaceholderAtLine(
-            string filename,
+        public static List<string> InsertPlaceholderAtLine(
+            List<string> lines,
             int line,
             string placeholder
         )
         {
-            var lines = File.ReadAllLines(filename).ToList();
             lines.Insert(line - 1, placeholder);
             // File.WriteAllLines(filename, lines);
-            return lines.ToArray();
+            return lines;
         }
 
         public static Dictionary<Uri, string> AddFilesToFs(
@@ -483,32 +524,23 @@ namespace placeholder
             BatchErrorReporter errorReporter = new BatchErrorReporter(options);
             var methodFile = "";
             var methodName = "";
+            bool multiple_location = false;
             var additionnalInclude = "";
             var blacklistedFile = "";
             if (args.Length < 2)
             {
                 Console.WriteLine(
-                    "Usage: Program <method_file> <method_name> [optional_third_arg]"
+                    "Usage: Program <method_file> <method_name> [multiple_location] [additional_include] [blacklisted_file]"
                 );
                 return 0;
-            }
-            else if (args.Length == 4)
-            {
-                methodFile = args[0];
-                methodName = args[1];
-                additionnalInclude = args[2];
-                blacklistedFile = args[3];
-            }
-            else if (args.Length == 3)
-            {
-                methodFile = args[0];
-                methodName = args[1];
-                additionnalInclude = args[2];
             }
             else
             {
                 methodFile = args[0];
                 methodName = args[1];
+                multiple_location = args.Length > 2 ? bool.Parse(args[2]) : false; // default value is false
+                additionnalInclude = args.Length > 3 ? args[3] : null; // default value is null
+                blacklistedFile = args.Length > 4 ? args[4] : null; // default value is null
             }
 
             string input;
@@ -607,21 +639,43 @@ namespace placeholder
             }
 
             var errorLocation = new ErrorLocation();
-            errorLocation.FindLocationFromError(error);
+            var potential_locations = errorLocation.FindLocationFromError(uri, program, error, multiple_location);
+
+            potential_locations.Add(errorLocation);
+            potential_locations = potential_locations.OrderBy(location => location.Line).ToList();
+
 
             // get method lines and insert placeholder
             var method_start_line = declaration.tok.line;
             var method_end_line = declaration.EndToken.line;
             var file_to_modify = declaration.tok.Filepath;
 
-            var modified_files = InsertPlaceholderAtLine(
-                file_to_modify,
-                errorLocation.Line,
-                "<assertion> Insert assertion here </assertion>"
-            );
+            var file_lines = File.ReadAllLines(file_to_modify).ToList();
+            int offset = 0;
+            foreach (var location in potential_locations)
+            {
+                file_lines = InsertPlaceholderAtLine(
+                    file_lines,
+                    location.Line + offset,
+                    "<assertion> Insert assertion here </assertion>"
+                );
+                offset++;
+            }
+
+            // Adjust the method lines
+            // method_start_line = offset;
+
+            // Concatenate method lines into a single string
+            // var method_code = string.Join("\n", method_lines);
+            method_end_line += offset;
+            // var modified_files = InsertPlaceholderAtLine(
+            //     file_to_modify,
+            //     errorLocation.Line,
+            //     "<assertion> Insert assertion here </assertion>"
+            // );
 
             // Extract the method
-            var method_lines = modified_files[(method_start_line - 1)..(method_end_line + 1)];
+            var method_lines = file_lines.ToArray()[(method_start_line - 1)..(method_end_line)];
             // Write method lines to stdout
             Console.WriteLine(string.Join("\n", method_lines));
 
