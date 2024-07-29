@@ -14,15 +14,16 @@ Prompts:
     Fix_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
     Method_context: "None"
     Feedback: False
-    Error_feedback: True
+    Error_feedback: False
     Nb_tries: 1
     Prompt_name: "placeholder"
     Type: "Static"
     Placeholder: True
+    Multiple_locations: True
 
 Model_parameters:
   Temperature: 1
-  Model: gpt-4
+  Model: gpt-4o
   Max_tokens: 2048
   Prompt_limit: 8192
   Encoding: "cl100k_base"

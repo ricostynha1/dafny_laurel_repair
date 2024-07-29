@@ -72,6 +72,8 @@ def generate_fix_llm(
         "Error message",
         "Feedback",
         "Try",
+        "Number placeholders",
+        "Placeholder position",
         "Diff",
         "Url",
     ]
@@ -129,10 +131,26 @@ def generate_fix_llm(
 
 
 def insert_assertion(method_with_placeholder, original_method, fix_prompt, try_number):
-    if "\n" not in fix_prompt:
-        new_method_content = method_with_placeholder.replace(
-            "<assertion> Insert assertion here </assertion>", fix_prompt
-        )
+    assertion, placeholder_number = fix_prompt
+    if "\n" not in assertion:
+        lines = method_with_placeholder.split("\n")
+
+        placeholder_count = 1
+        for i, line in enumerate(lines):
+            if "<assertion> Insert assertion here </assertion>" in line:
+                if placeholder_count == placeholder_number:
+                    # Replace the designated placeholder with the assertion string
+                    lines[i] = line.replace(
+                        "<assertion> Insert assertion here </assertion>",
+                        assertion,
+                    )
+                else:
+                    # Remove the other placeholders
+                    lines[i] = line.replace(
+                        "<assertion> Insert assertion here </assertion>", ""
+                    )
+                placeholder_count += 1
+        new_method_content = "\n".join(lines)
     else:
         code = extract_string_between_backticks(fix_prompt)
         new_method_content = get_new_method_content(
@@ -218,15 +236,22 @@ def process_method(
             config,
             unmodified_method_path,
         )
+        placeholder = "<assertion> Insert assertion here </assertion>"
+        nb_placeholders = method_with_placeholder.count(placeholder)
+        logger.info(f"Number of placeholders possible: {nb_placeholders}")
         for i, prompt in enumerate(new_prompts, start=1):
             try:
                 logger.info(f"{method.method_name} ===> Try {i}")
                 feedback = False
                 prompt_path = f"{method.file_path}_{method.index}_{prompt_index}_{config_prompt['Prompt_name']}_prompt"
                 prompt.set_path(prompt_path)
-                response = prompt.get_latest_message()["content"]
+                response_tuple = eval(prompt.get_latest_message()["content"])
+                assertion, placeholder_position = response_tuple
+                logger.info(
+                    f"Choose placeholder number: {placeholder_position} for {assertion}"
+                )
                 new_method, diff = insert_assertion(
-                    method_with_placeholder, method, response, i
+                    method_with_placeholder, method, response_tuple, i
                 )
                 method.move_to_results_directory(config["Results_dir"])
                 new_method.run_verification(
@@ -257,6 +282,8 @@ def process_method(
                     diff,
                     notebook_url,
                     csv_writer,
+                    nb_placeholders,
+                    placeholder_position,
                 )
                 previous_error = remove_warning(method.entire_error_message)
                 new_error = ""
@@ -273,7 +300,11 @@ def process_method(
 
                     prompt.feedback_error_message(new_error)
                     prompt.get_fix(config["Model_parameters"])
-                    response = prompt.get_latest_message()["content"]
+                    response = eval(prompt.get_latest_message()["content"])
+                    assertion, placeholder_position = response
+                    logger.info(
+                        f"Choose placeholder number: {placeholder_position} for {assertion}"
+                    )
                     new_method, diff = insert_assertion(
                         method_with_placeholder, method, response, i
                     )
@@ -307,6 +338,8 @@ def process_method(
                         diff,
                         notebook_url,
                         csv_writer,
+                        nb_placeholders,
+                        placeholder_position,
                     )
                     new_method.move_to_results_directory(config["Results_dir"])
 
@@ -389,6 +422,8 @@ def store_results(
     diff,
     notebook_url,
     csv_writer,
+    number_placeholders,
+    placeholder_position,
 ):
     fix_stats = []
 
@@ -452,6 +487,8 @@ def store_results(
             error_message_file,
             feedback,
             try_number,
+            number_placeholders,
+            placeholder_position,
             diff if len(diff) > 5 else "",
             notebook_url,
         ]

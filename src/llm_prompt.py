@@ -117,6 +117,12 @@ class Llm_prompt:
         current_prompt_length += num_tokens_method + num_tokens_fix_prompt
 
         method_to_insert = method
+        multiple_locations = False
+        if (
+            "Multiple_locations" in config_prompt
+            and config_prompt["Multiple_locations"]
+        ):
+            multiple_locations = True
         if config_prompt["Placeholder"]:
             if "--library" in dafny_args:
                 # extract the files url after --library in such a string "--library /usr/local/home/eric/dafny_repos/Dafny-VMC/src/**/*.dfy --resource-limit 20000"
@@ -127,10 +133,14 @@ class Llm_prompt:
                     method_name,
                     optional_files=library_files,
                     original_method_file=original_method_file,
+                    multiple_locations=multiple_locations,
                 )
             else:
                 method_to_insert = insert_assertion_location(
-                    error_message, program_to_fix, method_name
+                    error_message,
+                    program_to_fix,
+                    method_name,
+                    multiple_locations=multiple_locations,
                 )
         fix_prompt = config_prompt["Fix_prompt"]
         question = f"{fix_prompt}\n <method> {method_to_insert} </method>"
@@ -199,12 +209,12 @@ class Llm_prompt:
         duplicated_prompts = [self.copy() for _ in range(n - 1)]
         duplicated_prompts.append(self)
         for i, prompt in enumerate(duplicated_prompts):
-            prompt.messages.append({"role": "assistant", "content": fixes[i]})
+            prompt.messages.append({"role": "assistant", "content": str(fixes[i])})
         return duplicated_prompts
 
     def get_fix(self, model_parameters):
         fix = self.generate_fix(model_parameters)
-        self.messages.append({"role": "assistant", "content": fix})
+        self.messages.append({"role": "assistant", "content": str(fix)})
         return fix
 
     def generate_n_fix(self, model_parameters, n):
@@ -220,9 +230,13 @@ class Llm_prompt:
                             "assertion": {
                                 "type": "string",
                                 "description": "The Dafny assertion to insert into the placeholder.",
-                            }
+                            },
+                            "placeholder": {
+                                "type": "number",
+                                "description": "The placeholder number in which to insert the assertion. (from 1 to n, n being the total number of placeholders available)",
+                            },
                         },
-                        "required": ["assertion"],
+                        "required": ["assertion", "placeholder"],
                     },
                 },
             }
@@ -242,8 +256,11 @@ class Llm_prompt:
 
         generated_fixes = []
         for choice in response.choices:
+            function_arguments = json.loads(
+                choice.message.tool_calls[0].function.arguments
+            )
             generated_fixes.append(
-                json.loads(choice.message.tool_calls[0].function.arguments)["assertion"]
+                (function_arguments["assertion"], function_arguments["placeholder"])
             )
 
         return generated_fixes
@@ -261,9 +278,13 @@ class Llm_prompt:
                             "assertion": {
                                 "type": "string",
                                 "description": "The Dafny assertion to insert into the placeholder.",
-                            }
+                            },
+                            "placeholder": {
+                                "type": "number",
+                                "description": "The placeholder number in which to insert the assertion. (from 1 to n, n being the total number of placeholders available)",
+                            },
                         },
-                        "required": ["assertion"],
+                        "required": ["assertion", "placeholder"],
                     },
                 },
             }
@@ -280,6 +301,7 @@ class Llm_prompt:
             },
         )
 
-        return json.loads(response.choices[0].message.tool_calls[0].function.arguments)[
-            "assertion"
-        ]
+        function_arguments = json.loads(
+            response.choices[0].message.tool_calls[0].function.arguments
+        )
+        return function_arguments["assertion"], function_arguments["placeholder"]

@@ -17,6 +17,7 @@ def insert_assertion_location(
     method_name,
     optional_files=None,
     original_method_file=None,
+    multiple_locations=False,
 ):
     method_with_placeholder = call_placeholder_finder(
         remove_warning(message),
@@ -24,6 +25,7 @@ def insert_assertion_location(
         method_name,
         optional_files=optional_files,
         blacklisted_file=original_method_file,
+        multiple_locations=multiple_locations,
     )
     return method_with_placeholder
 

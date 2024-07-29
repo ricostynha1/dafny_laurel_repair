@@ -3,6 +3,9 @@ repos:
   rev: v4.0.1
   hooks:
     - id: trailing-whitespace
+      exclude: ^tests_package/ressources/
+    - id: end-of-file-fixer
+      exclude: ^tests_package/ressources
 
 - repo: local
   hooks:
