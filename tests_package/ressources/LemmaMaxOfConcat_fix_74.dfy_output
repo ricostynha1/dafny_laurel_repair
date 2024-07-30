@@ -7,7 +7,7 @@ lemma LemmaMaxOfConcat(xs: seq<int>, ys: seq<int>)
     reveal Max();
     if |xs| == 1 {
     } else {
-<assertion> Insert assertion here </assertion>
             LemmaMaxOfConcat(xs[1..], ys);
+<assertion> Insert assertion here </assertion>
     }
   }

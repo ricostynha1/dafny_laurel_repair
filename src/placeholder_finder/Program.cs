@@ -49,6 +49,29 @@ namespace placeholder
         {
             var position = new DafnyPosition(this.Line - 1, this.Column);
             var node_assert = program.FindNode<Statement>(uri, position);
+            var node_list = ErrorLocation.ExtractFindNodeChain(
+                program,
+                uri,
+                position,
+                null,
+                (INode node) => node is Statement
+            );
+            if (node_assert == null)
+            {
+                foreach (var module in program.Modules())
+                {
+                    node_assert = module.FindNode<Statement>(uri, position);
+                    if (node_assert != null)
+                    {
+                        break;
+                    }
+                }
+                // DONT DO this because we dont want to find pre and post conditions!!!
+                // if (node_assert == null)
+                // {
+                //     throw new Exception("Node not found");
+                // }
+            }
             this.SourceStatement = node_assert;
             return this.SourceStatement;
         }
