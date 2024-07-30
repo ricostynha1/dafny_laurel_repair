@@ -1,0 +1,16 @@
+lemma CountDC1SepMeansNoDc(segs: seq<SegV6>)
+    requires countDC(segs) <= 1
+    ensures findDCIdx(segs).Some? ==> countDC(segs[0..findDCIdx(segs).value]) == 0 && countDC(segs[findDCIdx(segs).value+1..]) == 0
+  {
+    var idx := findDCIdx(segs);
+    if idx.None? {
+
+    } else {
+      assert segs == segs[0..idx.value+1] + segs[idx.value+1..];
+      CountDCComp(segs[0..idx.value+1], segs[idx.value+1..]);
+      assert countDC(segs[0..idx.value+1]) + countDC(segs[idx.value+1..]) == countDC(segs);
+            CountDCComp(segs[0..idx.value], [segs[idx.value]]);
+<assertion> Insert assertion here </assertion>
+      assert countDC(segs[0..idx.value]) + countDC([segs[idx.value]]) == countDC(segs[0..idx.value+1]);
+    }
+  }

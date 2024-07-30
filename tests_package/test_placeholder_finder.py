@@ -314,3 +314,28 @@ class TestsLLM(unittest.TestCase):
         os.remove(new_method_path)
 
         self.assertEqual(output, expected_output)
+
+    def test_placeholder_finder_submodules_assertion(self):
+        error_file = "./tests_package/ressources/CountDC1SepMeansNoDc_fix_895.dfy_error"
+        method_file = "./tests_package/ressources/CountDC1SepMeansNoDc_fix_895.dfy"
+        result_file = (
+            "./tests_package/ressources/CountDC1SepMeansNoDc_fix_895.dfy_output"
+        )
+        method_name = "CountDC1SepMeansNoDc"
+        with open(error_file, "r") as file:
+            error_message = file.read()
+
+        new_method_path = "/usr/local/home/eric/dafny_repos/cedar-spec/cedar-dafny/def/ext/CountDC1SepMeansNoDc_fix_895.dfy"
+        shutil.copy(method_file, new_method_path)
+        try:
+            output = call_placeholder_finder(
+                error_message, new_method_path, method_name, multiple_locations=True
+            )
+        except Exception as e:
+            print(e)
+
+        with open(result_file, "r") as file:
+            expected_output = file.read()
+        os.remove(new_method_path)
+
+        self.assertEqual(output, expected_output)

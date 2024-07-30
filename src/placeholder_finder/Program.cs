@@ -49,13 +49,6 @@ namespace placeholder
         {
             var position = new DafnyPosition(this.Line - 1, this.Column);
             var node_assert = program.FindNode<Statement>(uri, position);
-            var node_list = ErrorLocation.ExtractFindNodeChain(
-                program,
-                uri,
-                position,
-                null,
-                (INode node) => node is Statement
-            );
             if (node_assert == null)
             {
                 foreach (var module in program.Modules())
@@ -353,6 +346,28 @@ namespace placeholder
                 null,
                 (INode node) => node is Statement
             );
+            if (listNode== null)
+            {
+                foreach (var module in program.Modules())
+                {
+                    listNode = ExtractFindNodeChain(
+                        module,
+                        uri,
+                        position,
+                        null,
+                        (INode node) => node is Statement
+                    );
+                    if (listNode != null)
+                    {
+                        break;
+                    }
+                }
+                // DONT DO this because we dont want to find pre and post conditions!!!
+                // if (node_assert == null)
+                // {
+                //     throw new Exception("Node not found");
+                // }
+            }
             var node = listNode.Data;
             while (node != null)
             {

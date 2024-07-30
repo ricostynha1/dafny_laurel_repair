@@ -1,0 +1,7 @@
+/usr/local/home/eric/dafny_repos/cedar-spec/cedar-dafny/def/ext/CountDC1SepMeansNoDc_fix_895.dfy(493,13): Error: assertion might not hold
+    |
+493 |       assert countDC(segs[0..idx.value]) + countDC([segs[idx.value]]) == countDC(segs[0..idx.value+1]);
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Dafny program verifier finished with 1 verified, 1 error
