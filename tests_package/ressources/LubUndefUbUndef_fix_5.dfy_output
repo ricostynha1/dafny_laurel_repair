@@ -23,7 +23,6 @@ lemma LubUndefUbUndef(t1 : Type, t2 : Type, t : Type, m: ValidationMode)
                 if k in rt.attrs.Keys {
                   assert (exists k' | k' in rt.attrs.Keys && k' in rt1.attrs.Keys :: !subtyAttrType(rt1.attrs[k'], rt.attrs[k'], m)) ||
                          (exists k' | k' in rt.attrs.Keys && k' in rt2.attrs.Keys :: !subtyAttrType(rt2.attrs[k'], rt.attrs[k'], m));
-<assertion> Insert assertion here </assertion>
                 }
 <assertion> Insert assertion here </assertion>
               }

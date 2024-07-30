@@ -153,7 +153,7 @@ namespace placeholder
             {
                 return DafnyErrorType.Assertion;
             }
-            else if (errorMessage.Contains("precondition for this call could not be proved"))
+            else if (errorMessage.Contains("precondition for this call could not be proved") || errorMessage.Contains("function precondition could not be proved"))
             {
                 return DafnyErrorType.Precondition;
             }
@@ -400,33 +400,33 @@ namespace placeholder
             this.File = token.filename;
             this.Line = token.line;
             this.Column = token.col;
-            if (multiple_location)
-            {
-                var node = error.SourceStatement;
-                BlockStmt blockStatement = null;
+            // if (multiple_location)
+            // {
+            //     var node = error.SourceStatement;
+            //     BlockStmt blockStatement = null;
 
-                if (node is IfStmt ifStatement)
-                {
-                    blockStatement = ifStatement.Thn as BlockStmt;
-                    if (ifStatement.Els != null)
-                    {
-                        blockStatement = ifStatement.Els as BlockStmt;
-                    }
-                }
-                else if (node is ForallStmt forallStatement)
-                {
-                    blockStatement = forallStatement.Body as BlockStmt;
-                }
-                else if (node is AssertStmt assertStatement)
-                {
-                    blockStatement = assertStatement.SubStatements as BlockStmt;
-                }
+            //     if (node is IfStmt ifStatement)
+            //     {
+            //         blockStatement = ifStatement.Thn as BlockStmt;
+            //         if (ifStatement.Els != null)
+            //         {
+            //             blockStatement = ifStatement.Els as BlockStmt;
+            //         }
+            //     }
+            //     else if (node is ForallStmt forallStatement)
+            //     {
+            //         blockStatement = forallStatement.Body as BlockStmt;
+            //     }
+            //     else if (node is AssertStmt assertStatement)
+            //     {
+            //         blockStatement = assertStatement.SubStatements as BlockStmt;
+            //     }
 
-                if (blockStatement != null)
-                {
-                    errorLocations = GetErrorLocationsWithoutFindNode(blockStatement, token);
-                }
-            }
+            //     if (blockStatement != null)
+            //     {
+            //         errorLocations = GetErrorLocationsWithoutFindNode(blockStatement, token);
+            //     }
+            // }
             return errorLocations;
         }
 
