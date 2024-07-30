@@ -25,6 +25,7 @@ namespace placeholder
         LHSValue,
         Forall,
         Calc,
+        Constructed,
         Unknown
     }
 
@@ -184,6 +185,10 @@ namespace placeholder
             {
                 return DafnyErrorType.Calc;
             }
+            else if (errorMessage.Contains("can only be applied to datatype values constructed"))
+            {
+                return DafnyErrorType.Constructed;
+            }
             else
             {
                 return DafnyErrorType.Unknown;
@@ -228,6 +233,9 @@ namespace placeholder
                     errorLocations = AssignAtEndOfBlock(program, uri, error, multiple_location);
                     break;
                 case DafnyErrorType.Calc:
+                    errorLocations = AssignErrorLocation(program, uri, error, multiple_location);
+                    break;
+                case DafnyErrorType.Constructed:
                     errorLocations = AssignErrorLocation(program, uri, error, multiple_location);
                     break;
                 default:
