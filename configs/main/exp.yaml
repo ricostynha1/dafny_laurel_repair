@@ -1,40 +1,40 @@
 Benchmarcks:
 
-# - Name: libraries-basic
+- Name: libraries-basic
 #   # Content: results/testing_libraries_k3__0.csv
-#   Configs:
+  Configs:
 #   # - configs/main/config_repos/config_llm_libraries_dynamic.yaml
 #   # - configs/main/config_repos/config_llm_libraries_static.yaml
 #   # - configs/main/config_repos/config_llm_libraries_oldexamples.yaml
-#   - configs/main/config_repos/config_llm_libraries_placeholder.yaml
-#   - configs/main/config_repos/config_llm_libraries_baseline.yaml
-#   - configs/main/config_repos/config_llm_libraries_error.yaml
-#   - configs/main/config_repos/config_llm_libraries_errorplaceholder.yaml
+  - configs/main/config_repos/config_llm_libraries_placeholder.yaml
+  - configs/main/config_repos/config_llm_libraries_baseline.yaml
+  - configs/main/config_repos/config_llm_libraries_error.yaml
+  - configs/main/config_repos/config_llm_libraries_errorplaceholder.yaml
 #   # - configs/main/config_repos/config_llm_libraries_randomExample.yaml
-#   Content: results/placeholder_dataset/libraries.csv
+  Content: results/placeholder_dataset/libraries.csv
 
-# - Name: vmc-basic
+- Name: vmc-basic
 #   # Content: results/testing_libraries_k3__0.csv
-#   Configs:
+  Configs:
 #   # - configs/main/config_repos/config_llm_libraries_dynamic.yaml
 #   # - configs/main/config_repos/config_llm_libraries_static.yaml
 #   # - configs/main/config_repos/config_llm_libraries_oldexamples.yaml
-#   - configs/main/config_repos/config_llm_DafnyVMC_placeholder.yaml
-#   - configs/main/config_repos/config_llm_DafnyVMC_baseline.yaml
-#   - configs/main/config_repos/config_llm_DafnyVMC_error.yaml
-#   - configs/main/config_repos/config_llm_DafnyVMC_errorplaceholder.yaml
+  - configs/main/config_repos/config_llm_DafnyVMC_placeholder.yaml
+  - configs/main/config_repos/config_llm_DafnyVMC_baseline.yaml
+  - configs/main/config_repos/config_llm_DafnyVMC_error.yaml
+  - configs/main/config_repos/config_llm_DafnyVMC_errorplaceholder.yaml
 #   # - configs/main/config_repos/config_llm_libraries_randomExample.yaml
-#   Content: results/placeholder_dataset/dafnyVMC.csv
+  Content: results/placeholder_dataset/dafnyVMC.csv
 - Name: cedar-basic
   # Content: results/testing_libraries_k3__0.csv
   Configs:
   # - configs/main/config_repos/config_llm_libraries_dynamic.yaml
   # - configs/main/config_repos/config_llm_libraries_static.yaml
   # - configs/main/config_repos/config_llm_libraries_oldexamples.yaml
-  # - configs/main/config_repos/config_llm_cedar_placeholder.yaml
+  - configs/main/config_repos/config_llm_cedar_placeholder.yaml
   - configs/main/config_repos/config_llm_cedar_baseline.yaml
   - configs/main/config_repos/config_llm_cedar_error.yaml
-  # - configs/main/config_repos/config_llm_cedar_errorplaceholder.yaml
+  - configs/main/config_repos/config_llm_cedar_errorplaceholder.yaml
   # - configs/main/config_repos/config_llm_libraries_randomExample.yaml
   Content: results/placeholder_dataset/cedar.csv
 # - Name: libraries-k3--1

@@ -10,8 +10,8 @@ Prompts:
     Method_context: "None"
     Feedback: True
     Error_feedback: False
-    Nb_tries: 10
-    Prompt_name: "error"
+    Nb_tries: 20
+    Prompt_name: "Error"
     Type: "Provided"
     Placeholder: False
 
