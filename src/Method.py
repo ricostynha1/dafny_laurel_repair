@@ -70,11 +70,13 @@ class Method:
 
     # the directory needs to be where the previous file is
     # otherwise the dependencies won't work
-    def create_modified_method(self, new_method, directory, try_nb, type=""):
+    def create_modified_method(
+        self, new_method, directory, try_nb, type="", prompt_type=""
+    ):
         new_content = replace_method(
             self.get_file_content(), self.method_name, new_method
         )
-        fix_filename = f"{directory}/{self.method_name}_fix_{self.index}_{try_nb}.dfy"
+        fix_filename = f"{directory}/{self.method_name}_fix_{prompt_type}_{self.index}_{try_nb}.dfy"
         with open(fix_filename, "w") as file:
             file.write(new_content)
         logger.debug(f"Created file: {fix_filename}")

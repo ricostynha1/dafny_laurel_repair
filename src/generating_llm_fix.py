@@ -130,26 +130,35 @@ def generate_fix_llm(
     return success_count, method_processed
 
 
-def insert_assertion(method_with_placeholder, original_method, fix_prompt, try_number):
+def insert_assertion(
+    method_with_placeholder, original_method, fix_prompt, try_number, config_prompt
+):
     assertion, placeholder_number = fix_prompt
     if "\n" not in assertion:
         lines = method_with_placeholder.split("\n")
 
         placeholder_count = 1
-        for i, line in enumerate(lines):
-            if "<assertion> Insert assertion here </assertion>" in line:
-                if placeholder_count == placeholder_number:
-                    # Replace the designated placeholder with the assertion string
-                    lines[i] = line.replace(
-                        "<assertion> Insert assertion here </assertion>",
-                        assertion,
-                    )
-                else:
-                    # Remove the other placeholders
-                    lines[i] = line.replace(
-                        "<assertion> Insert assertion here </assertion>", ""
-                    )
-                placeholder_count += 1
+        if "<assertion> Insert assertion here </assertion>" in method_with_placeholder:
+            for i, line in enumerate(lines):
+                if "<assertion> Insert assertion here </assertion>" in line:
+                    if placeholder_count == placeholder_number:
+                        # Replace the designated placeholder with the assertion string
+                        lines[i] = line.replace(
+                            "<assertion> Insert assertion here </assertion>",
+                            assertion,
+                        )
+                    else:
+                        # Remove the other placeholders
+                        lines[i] = line.replace(
+                            "<assertion> Insert assertion here </assertion>", ""
+                        )
+                    placeholder_count += 1
+        else:
+            # add a line at the placeholder_number
+            if lines[placeholder_number].strip() == "{":
+                lines.insert(placeholder_number + 1, assertion)
+            else:
+                lines.insert(placeholder_number, assertion)
         new_method_content = "\n".join(lines)
     else:
         code = extract_string_between_backticks(fix_prompt)
@@ -162,6 +171,7 @@ def insert_assertion(method_with_placeholder, original_method, fix_prompt, try_n
         os.path.dirname(original_method.file_path),
         try_number,
         "fix",
+        config_prompt["Prompt_name"],
     )
     logger.debug(f"diff : {diff}")
     return new_method, diff
@@ -175,7 +185,9 @@ def generate_prompts(
     config,
     unmodified_method_path,
 ):
-    threshold = config_prompt.get("Context", {}).get("Threshold", 0)
+    threshold = 0
+    if isinstance(config_prompt["Context"], dict):
+        threshold = config_prompt.get("Context", {}).get("Threshold", 0)
 
     llm_prompt = Llm_prompt(
         prompt_index,
@@ -200,7 +212,9 @@ def generate_prompts(
     )
 
     new_prompts = llm_prompt.get_n_fixes(
-        config["Model_parameters"], config_prompt["Nb_tries"]
+        config["Model_parameters"],
+        config_prompt["Nb_tries"],
+        config_prompt["Placeholder"],
     )
 
     return new_prompts, method_with_placeholder
@@ -251,7 +265,7 @@ def process_method(
                     f"Choose placeholder number: {placeholder_position} for {assertion}"
                 )
                 new_method, diff = insert_assertion(
-                    method_with_placeholder, method, response_tuple, i
+                    method_with_placeholder, method, response_tuple, i, config_prompt
                 )
                 method.move_to_results_directory(config["Results_dir"])
                 new_method.run_verification(
@@ -299,14 +313,16 @@ def process_method(
                     method.file_path = original_method_file
 
                     prompt.feedback_error_message(new_error)
-                    prompt.get_fix(config["Model_parameters"])
+                    prompt.get_fix(
+                        config["Model_parameters"], config_prompt["Placeholder"]
+                    )
                     response = eval(prompt.get_latest_message()["content"])
                     assertion, placeholder_position = response
                     logger.info(
                         f"Choose placeholder number: {placeholder_position} for {assertion}"
                     )
                     new_method, diff = insert_assertion(
-                        method_with_placeholder, method, response, i
+                        method_with_placeholder, method, response, i, config_prompt
                     )
                     method.move_to_results_directory(config["Results_dir"])
                     new_method.run_verification(

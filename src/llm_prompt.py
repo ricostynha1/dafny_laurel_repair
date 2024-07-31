@@ -204,21 +204,44 @@ class Llm_prompt:
     def get_latest_message(self):
         return self.messages[-1]
 
-    def get_n_fixes(self, model_parameters, n):
-        fixes = self.generate_n_fix(model_parameters, n)
+    def get_n_fixes(self, model_parameters, n, placeholder):
+        fixes = self.generate_n_fix(model_parameters, n, placeholder)
         duplicated_prompts = [self.copy() for _ in range(n - 1)]
         duplicated_prompts.append(self)
         for i, prompt in enumerate(duplicated_prompts):
             prompt.messages.append({"role": "assistant", "content": str(fixes[i])})
         return duplicated_prompts
 
-    def get_fix(self, model_parameters):
-        fix = self.generate_fix(model_parameters)
+    def get_fix(self, model_parameters, placeholder):
+        fix = self.generate_fix(model_parameters, placeholder)
         self.messages.append({"role": "assistant", "content": str(fix)})
         return fix
 
-    def generate_n_fix(self, model_parameters, n):
-        tools = [
+    def generate_n_fix(self, model_parameters, n, placeholder):
+        tools_line = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "insert_dafny_assertion",
+                    "description": "Use this function to insert a Dafny assertion",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "assertion": {
+                                "type": "string",
+                                "description": "The Dafny assertion to insert into the placeholder. It needs to start with `assert`.",
+                            },
+                            "location": {
+                                "type": "number",
+                                "description": "The line number in which to insert the assertion. (from 1 to n, n being the total lines)",
+                            },
+                        },
+                        "required": ["assertion", "location"],
+                    },
+                },
+            }
+        ]
+        tools_placeholder = [
             {
                 "type": "function",
                 "function": {
@@ -231,12 +254,12 @@ class Llm_prompt:
                                 "type": "string",
                                 "description": "The Dafny assertion to insert into the placeholder.",
                             },
-                            "placeholder": {
+                            "location": {
                                 "type": "number",
                                 "description": "The placeholder number in which to insert the assertion. (from 1 to n, n being the total number of placeholders available)",
                             },
                         },
-                        "required": ["assertion", "placeholder"],
+                        "required": ["assertion", "location"],
                     },
                 },
             }
@@ -246,7 +269,7 @@ class Llm_prompt:
             temperature=model_parameters["Temperature"],
             max_tokens=model_parameters["Max_tokens"],
             messages=self.messages,
-            tools=tools,
+            tools=tools_placeholder if placeholder else tools_line,
             tool_choice={
                 "type": "function",
                 "function": {"name": "insert_dafny_assertion"},
@@ -260,13 +283,36 @@ class Llm_prompt:
                 choice.message.tool_calls[0].function.arguments
             )
             generated_fixes.append(
-                (function_arguments["assertion"], function_arguments["placeholder"])
+                (function_arguments["assertion"], function_arguments["location"])
             )
 
         return generated_fixes
 
-    def generate_fix(self, model_parameters):
-        tools = [
+    def generate_fix(self, model_parameters, placeholder):
+        tools_line = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "insert_dafny_assertion",
+                    "description": "Use this function to insert a Dafny assertion",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "assertion": {
+                                "type": "string",
+                                "description": "The Dafny assertion to insert into the placeholder. It needs to start with `assert`.",
+                            },
+                            "location": {
+                                "type": "number",
+                                "description": "The line number in which to insert the assertion. (from 1 to n, n being the total lines)",
+                            },
+                        },
+                        "required": ["assertion", "location"],
+                    },
+                },
+            }
+        ]
+        tools_placeholder = [
             {
                 "type": "function",
                 "function": {
@@ -279,12 +325,12 @@ class Llm_prompt:
                                 "type": "string",
                                 "description": "The Dafny assertion to insert into the placeholder.",
                             },
-                            "placeholder": {
+                            "location": {
                                 "type": "number",
                                 "description": "The placeholder number in which to insert the assertion. (from 1 to n, n being the total number of placeholders available)",
                             },
                         },
-                        "required": ["assertion", "placeholder"],
+                        "required": ["assertion", "location"],
                     },
                 },
             }
@@ -294,7 +340,7 @@ class Llm_prompt:
             temperature=model_parameters["Temperature"],
             max_tokens=model_parameters["Max_tokens"],
             messages=self.messages,
-            tools=tools,
+            tools=tools_placeholder if placeholder else tools_line,
             tool_choice={
                 "type": "function",
                 "function": {"name": "insert_dafny_assertion"},
@@ -304,4 +350,4 @@ class Llm_prompt:
         function_arguments = json.loads(
             response.choices[0].message.tool_calls[0].function.arguments
         )
-        return function_arguments["assertion"], function_arguments["placeholder"]
+        return function_arguments["assertion"], function_arguments["location"]
