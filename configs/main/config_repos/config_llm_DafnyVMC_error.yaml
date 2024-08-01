@@ -5,8 +5,8 @@ Prompts:
       "You are a Dafny formal method expert.
       You will be provided with a Dafny method indicated by the delimiter <method>
       that does not verify because of an error indicated in between <error> tags.
-      Your task is to insert at a certain line an assertion starting with `assert` to make it verify"
-    Fix_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
+      Your task is to insert an assertion at a certain line to make it verify. Your answer must start with `assert`.
+    Fix_prompt: "Can you fix this proof by inserting one assertion in the method <method>?"
     Method_context: "None"
     Feedback: True
     Error_feedback: False

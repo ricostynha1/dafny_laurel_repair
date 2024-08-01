@@ -58,6 +58,7 @@ class Method:
 
         file_name, file_extension = os.path.splitext(os.path.basename(self.file_path))
         new_file_path = os.path.join(result_directory, f"{file_name}{file_extension}")
+        logger.info(f"Tring to Moving {self.file_path} to {new_file_path}")
         if os.path.exists(self.file_path):
             shutil.move(self.file_path, new_file_path)
             logger.debug(

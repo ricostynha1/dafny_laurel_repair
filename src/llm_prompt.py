@@ -4,7 +4,11 @@ import json
 import openai
 import tiktoken
 import yaml
-from dafny_utils import extract_dafny_functions
+from dafny_utils import (
+    extract_dafny_functions,
+    remove_line_numbers,
+    replace_and_extract_method_with_line_numbers,
+)
 from guidance import system, user, assistant, models
 
 from error_parser import insert_assertion_location
@@ -143,6 +147,9 @@ class Llm_prompt:
                     multiple_locations=multiple_locations,
                 )
         fix_prompt = config_prompt["Fix_prompt"]
+        method_to_insert = replace_and_extract_method_with_line_numbers(
+            program_to_fix, method_to_insert, method_name
+        )
         question = f"{fix_prompt}\n <method> {method_to_insert} </method>"
         if feedback:
             num_tokens_feedback = len(encoding.encode(feedback))
@@ -174,7 +181,7 @@ class Llm_prompt:
         with user():
             self.chat += question
         self.messages.append({"role": "user", "content": question})
-        return method_to_insert
+        return remove_line_numbers(method_to_insert)
 
     def feedback_error_message(self, error_message):
         error_feedback = (
@@ -252,7 +259,7 @@ class Llm_prompt:
                         "properties": {
                             "assertion": {
                                 "type": "string",
-                                "description": "The Dafny assertion to insert into the placeholder.",
+                                "description": "The Dafny assertion to insert into the placeholder. It needs to start with `assert`.",
                             },
                             "location": {
                                 "type": "number",
@@ -323,7 +330,7 @@ class Llm_prompt:
                         "properties": {
                             "assertion": {
                                 "type": "string",
-                                "description": "The Dafny assertion to insert into the placeholder.",
+                                "description": "The Dafny assertion to insert into the placeholder. It needs to start with `assert`.",
                             },
                             "location": {
                                 "type": "number",

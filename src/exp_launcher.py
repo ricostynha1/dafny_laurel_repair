@@ -55,6 +55,7 @@ if __name__ == "__main__":
             if benchmarck.get("Training_file"):
                 command += ["-t", benchmarck["Training_file"]]
             print(" ".join(command))
+            print("")
             subprocess.run(command)
 
             output_files.append(output_file)

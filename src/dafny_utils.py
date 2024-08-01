@@ -143,6 +143,70 @@ def extract_assertions(code):
     return matches
 
 
+def replace_and_extract_method_with_line_numbers(file_path, method_string, method_name):
+    # Read the file
+    with open(file_path, "r") as file:
+        file_content = file.read()
+
+    # Replace the method in the file content
+    new_file_content = replace_method(file_content, method_name, method_string)
+
+    # Extract the method with line numbers
+    method_with_line_numbers = extract_dafny_functions_with_line_numbers(
+        new_file_content, method_name
+    )
+
+    return method_with_line_numbers
+
+
+def remove_line_numbers(text):
+    return re.sub(r"^\d+:\s", "", text, flags=re.MULTILINE)
+
+
+def extract_dafny_functions_with_line_numbers(dafny_code, name):
+    inside_function = False
+    current_function = ""
+    brace_count = 0
+    line_number = 0
+
+    lines = dafny_code.split("\n")
+
+    for line in lines:
+        line_number += 1
+        if "<assertion> Insert assertion here </assertion>" in line:
+            current_function += line + "\n"
+            continue
+        if f"lemma {name}" in line or f"method {name}" in line:
+            inside_function = True
+            current_function += f"{line_number}: {line}\n"
+            brace_count += line.count("{") - line.count("}")
+        elif inside_function:
+            current_function += f"{line_number}: {line}\n"
+            brace_line_count = line.count("{") - line.count("}")
+            brace_count += brace_line_count
+
+            if (
+                brace_count == 0
+                and "}" in line
+                and (brace_line_count != 0 or "{}" in line)
+            ):
+                inside_function = False
+                return current_function
+
+
+def find_starting_line_number(file_path, method_name):
+    with open(file_path, "r") as file:
+        lines = file.readlines()
+
+    for i, line in enumerate(lines, start=1):
+        if line.strip().startswith(f"method {method_name}") or line.strip().startswith(
+            f"lemma {method_name}"
+        ):
+            return i
+
+    return None
+
+
 def extract_dafny_functions(dafny_code, name):
     inside_function = False
     current_function = ""

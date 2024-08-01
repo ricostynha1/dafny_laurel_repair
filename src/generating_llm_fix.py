@@ -8,6 +8,7 @@ from config_parsing import parse_config_llm
 from dafny_utils import (
     compare_errormessage,
     extract_dafny_functions,
+    find_starting_line_number,
 )
 from error_parser import remove_warning
 from llm_prompt import Llm_prompt
@@ -155,10 +156,18 @@ def insert_assertion(
                     placeholder_count += 1
         else:
             # add a line at the placeholder_number
-            if lines[placeholder_number].strip() == "{":
-                lines.insert(placeholder_number + 1, assertion)
-            else:
-                lines.insert(placeholder_number, assertion)
+            try:
+                # insert at the correct line!
+                method_line = find_starting_line_number(
+                    original_method.file_path, original_method.method_name
+                )
+                placeholder_relative_line = placeholder_number - method_line
+                if lines[placeholder_relative_line].strip() == "{":
+                    lines.insert(placeholder_relative_line + 1, assertion)
+                else:
+                    lines.insert(placeholder_relative_line, assertion)
+            except IndexError as e:
+                logger.error(e)
         new_method_content = "\n".join(lines)
     else:
         code = extract_string_between_backticks(fix_prompt)
@@ -204,7 +213,9 @@ def generate_prompts(
         method.entire_error_message,
         config["Model_parameters"],
         config_prompt,
-        method.entire_error_message if config_prompt["Feedback"] else None,
+        remove_warning(method.entire_error_message)
+        if config_prompt["Feedback"]
+        else None,
         examples_selectors[prompt_index - 1],
         threshold,
         config.get("Dafny_args", ""),
@@ -254,6 +265,8 @@ def process_method(
         nb_placeholders = method_with_placeholder.count(placeholder)
         logger.info(f"Number of placeholders possible: {nb_placeholders}")
         for i, prompt in enumerate(new_prompts, start=1):
+            if success:
+                break
             try:
                 logger.info(f"{method.method_name} ===> Try {i}")
                 feedback = False
@@ -421,6 +434,7 @@ def get_new_method_content(fix_prompt, method_name):
 
 
 def cleanup_environment(tmp_original_file_location, original_file_path):
+    logger.info(f"Cleanup: {tmp_original_file_location} -> {original_file_path}")
     shutil.copy(tmp_original_file_location, original_file_path)
 
 

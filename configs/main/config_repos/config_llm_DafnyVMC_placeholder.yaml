@@ -5,7 +5,7 @@ Prompts:
       "You are a Dafny formal method expert.
       You will be provided with a Dafny method indicated by the delimiter <method>
       that does not verify.
-      Your task is to insert an assertion in the <assertion> placeholder to make it verify."
+      Your task is to insert an assertion in the <assertion> placeholder to make it verify. Your answer must start with `assert`."
     Fix_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
     Method_context: "None"
     Feedback: True

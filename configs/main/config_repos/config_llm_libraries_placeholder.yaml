@@ -5,12 +5,12 @@ Prompts:
       "You are a Dafny formal method expert.
       You will be provided with a Dafny method indicated by the delimiter <method>
       that does not verify.
-      Your task is to insert an assertion in the <assertion> placeholder to make it verify."
+      Your task is to insert an assertion in the <assertion> placeholder to make it verify. Your answer must start with `assert`."
     Fix_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
     Method_context: "None"
     Feedback: False
     Error_feedback: False
-    Nb_tries: 20
+    Nb_tries: 1
     Prompt_name: "Placeholder"
     Type: "Provided"
     Placeholder: True
@@ -21,5 +21,5 @@ Model_parameters:
   Max_tokens: 2048
   Prompt_limit: 8192
   Encoding: "cl100k_base"
-Dafny_args: "--use-basename-for-filename --cores:2 --verification-time-limit:300 --disable-nonlinear-arithmetic"
+Dafny_args: "--use-basename-for-filename --cores:2 --verification-time-limit:30 --disable-nonlinear-arithmetic"
 Results_file: ./results_llm/stats_llm_libraries_sample20_placeholder.csv

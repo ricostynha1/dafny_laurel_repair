@@ -14,7 +14,7 @@ Prompts:
       You will be provided with a Dafny method indicated by the delimiter <method>
       that does not verify because of an error indicated in between <error> tagsalong
       along with its dependencies with the delimiter <dependencies>.
-      Your task is to insert an assertion in the <assertion> placeholder to make it verify."
+      Your task is to insert an assertion in the <assertion> placeholder to make it verify. Your answer must start with `assert`."
     Fix_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
     Method_context: "None"
     Feedback: False
@@ -30,5 +30,5 @@ Model_parameters:
   Max_tokens: 2048
   Prompt_limit: 8192
   Encoding: "cl100k_base"
-Dafny_args: "--use-basename-for-filename --cores:2 --verification-time-limit:300 --disable-nonlinear-arithmetic"
+Dafny_args: "--use-basename-for-filename --cores:2 --verification-time-limit:30 --disable-nonlinear-arithmetic"
 Results_file: ./results_llm/stats_llm_libraries_sample20_placeholder.csv
