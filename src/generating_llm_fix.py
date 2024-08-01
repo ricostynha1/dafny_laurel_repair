@@ -253,14 +253,19 @@ def process_method(
     new_method = None
     diff = ""
     for prompt_index, config_prompt in enumerate(config["Prompts"], start=1):
-        new_prompts, method_with_placeholder = generate_prompts(
-            prompt_index,
-            config_prompt,
-            examples_selectors,
-            method,
-            config,
-            unmodified_method_path,
-        )
+        try:
+            new_prompts, method_with_placeholder = generate_prompts(
+                prompt_index,
+                config_prompt,
+                examples_selectors,
+                method,
+                config,
+                unmodified_method_path,
+            )
+        except Exception as e:
+            traceback_str = traceback.format_exc()
+            logger.error(f"An error occurred: {e}\n{traceback_str}")
+            break
         placeholder = "<assertion> Insert assertion here </assertion>"
         nb_placeholders = method_with_placeholder.count(placeholder)
         logger.info(f"Number of placeholders possible: {nb_placeholders}")

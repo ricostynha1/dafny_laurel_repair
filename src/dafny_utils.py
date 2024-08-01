@@ -160,6 +160,8 @@ def replace_and_extract_method_with_line_numbers(file_path, method_string, metho
 
 
 def remove_line_numbers(text):
+    if not text:
+        return text
     return re.sub(r"^\d+:\s", "", text, flags=re.MULTILINE)
 
 
