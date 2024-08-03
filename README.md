@@ -142,3 +142,18 @@ make run_lib_static
 ### Dataset location
 
 All the assertions are available in `./results/placeholder_dataset/`.
+
+## Run the experiments
+
+For the placeholder experiment:
+```
+make exp_placeholder
+```
+
+For the similarity experiment:
+```
+poetry run python launch_nfold.py
+poetry run python launch_nfold_vmc.py
+poetry run python launch_nfold_cedar.py
+
+```

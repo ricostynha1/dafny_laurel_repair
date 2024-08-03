@@ -19,5 +19,5 @@ run_lib_baseline:
 	poetry run python src/test_harness.py llm configs/main/config_repos/config_llm_libraries_baseline.yaml -p results/placeholder_dataset/libraries.csv -m 52
 test:
 	 poetry run python -m unittest discover -s ./tests_package
-exp:
+exp_placeholder:
 	 python src/exp_launcher.py ./configs/main/exp.yaml
