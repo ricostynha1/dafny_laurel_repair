@@ -9,21 +9,20 @@ Prompts:
     System_prompt: |
       "You are a Dafny formal method expert.
       You will be provided with a Dafny method indicated by the delimiter <method>
-      that does not verify because of an error indicated in between <error> tagsalong
-      along with its dependencies with the delimiter <dependencies>.
+      that does not verify.
       Your task is to insert an assertion in the <assertion> placeholder to make it verify. Your answer must start with `assert`."
-    Fix_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
+    Fix_prompt: "Can you fix this proof by inserting one assertion in the method?"
     Method_context: "None"
     Feedback: False
     Error_feedback: False
     Nb_tries: 10
     Prompt_name: "dynamic"
     Type: "Dynamic"
-    Placeholder: True
+    Placeholder: False
 
 Model_parameters:
   Temperature: 1
-  Model: gpt-4
+  Model: gpt-4o
   Max_tokens: 2048
   Prompt_limit: 8192
   Encoding: "cl100k_base"

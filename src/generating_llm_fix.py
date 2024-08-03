@@ -242,6 +242,8 @@ def process_method(
     unmodified_method_path,
 ):
     success = False
+    nb_placeholders = 0
+    placeholder_position = 0
     logger.info("+--------------------------------------+")
     method.run_verification(config["Results_dir"], config.get("Dafny_args", ""))
     if method.verification_result == "Correct":
@@ -262,13 +264,13 @@ def process_method(
                 config,
                 unmodified_method_path,
             )
+            placeholder = "<assertion> Insert assertion here </assertion>"
+            nb_placeholders = method_with_placeholder.count(placeholder)
+            logger.info(f"Number of placeholders possible: {nb_placeholders}")
         except Exception as e:
             traceback_str = traceback.format_exc()
             logger.error(f"An error occurred: {e}\n{traceback_str}")
             break
-        placeholder = "<assertion> Insert assertion here </assertion>"
-        nb_placeholders = method_with_placeholder.count(placeholder)
-        logger.info(f"Number of placeholders possible: {nb_placeholders}")
         for i, prompt in enumerate(new_prompts, start=1):
             if success:
                 break
@@ -323,6 +325,7 @@ def process_method(
                     new_error = remove_warning(new_method.entire_error_message)
                 if (
                     new_error != ""
+                    and previous_error != ""
                     and not compare_errormessage(previous_error, new_error)
                     and config_prompt["Error_feedback"]
                 ):
@@ -401,6 +404,8 @@ def process_method(
                     diff,
                     notebook_url,
                     csv_writer,
+                    nb_placeholders,
+                    placeholder_position,
                 )
     method.move_to_results_directory(os.path.dirname(original_file_location))
     if new_method is not None:

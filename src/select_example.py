@@ -221,7 +221,7 @@ def compute_clustering(suggestions, pickle_file, force=False):
                 return pickle.load(f)
             except Exception as e:
                 print(
-                    f"Error loading pickle file, try recomputing the cluster by setting force=True: {e}"
+                    f"Error loading pickle file, try recomputing the cluster by setting force=True: {e}, file: {pickle_file}"
                 )
                 raise
     clustering = mss.HierarchicalClustering(

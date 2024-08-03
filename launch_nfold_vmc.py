@@ -5,23 +5,23 @@ from sklearn.model_selection import KFold
 
 
 # dataset = "cedar"
-# dataset = "dafnyVMC"
-dataset = "libraries"
+dataset = "dafnyVMC"
+# dataset = "libraries"
 
 configs = [
     # "configs/main/config_repos/config_llm_cedar_dynamic.yaml",
     # "configs/main/config_repos/config_llm_cedar_dynamicPlaceholder.yaml",
     # "configs/main/config_repos/config_llm_cedar_placeholder.yaml",
     # "configs/main/config_repos/config_llm_cedar_randomExamples.yaml"
-    "configs/main/config_repos/config_llm_libraries_dynamic.yaml",
-    "configs/main/config_repos/config_llm_libraries_placeholder.yaml",
-    "configs/main/config_repos/config_llm_libraries_randomExamples.yaml",
-    "configs/main/config_repos/config_llm_libraries_dynamicPlaceholder.yaml",
+    # "configs/main/config_repos/config_llm_libraries_dynamic.yaml",
+    # "configs/main/config_repos/config_llm_libraries_placeholder.yaml",
+    # "configs/main/config_repos/config_llm_libraries_randomExamples.yaml",
+    # "configs/main/config_repos/config_llm_libraries_dynamicPlaceholder.yaml",
     # "configs/main/config_repos/config_llm_cedar_randomExamples.yaml"
-    #    "configs/main/config_repos/config_llm_DafnyVMC_dynamicPlaceholder.yaml",
-    #    "configs/main/config_repos/config_llm_DafnyVMC_dynamic.yaml",
-    #    "configs/main/config_repos/config_llm_DafnyVMC_placeholder.yaml",
-    #    "configs/main/config_repos/config_llm_DafnyVMC_randomExample.yaml"
+    "configs/main/config_repos/config_llm_DafnyVMC_dynamicPlaceholder.yaml",
+    "configs/main/config_repos/config_llm_DafnyVMC_dynamic.yaml",
+    "configs/main/config_repos/config_llm_DafnyVMC_placeholder.yaml",
+    "configs/main/config_repos/config_llm_DafnyVMC_randomExample.yaml",
 ]
 
 benchmarks = {}
