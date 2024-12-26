@@ -18,10 +18,12 @@ configs = [
     # "configs/main/config_repos/config_llm_libraries_randomExamples.yaml",
     # "configs/main/config_repos/config_llm_libraries_dynamicPlaceholder.yaml",
     # "configs/main/config_repos/config_llm_cedar_randomExamples.yaml"
-    "configs/main/config_repos/config_llm_DafnyVMC_dynamicPlaceholder.yaml",
-    "configs/main/config_repos/config_llm_DafnyVMC_dynamic.yaml",
-    "configs/main/config_repos/config_llm_DafnyVMC_placeholder.yaml",
-    "configs/main/config_repos/config_llm_DafnyVMC_randomExample.yaml",
+    # "configs/main/config_repos/config_llm_DafnyVMC_dynamicPlaceholder.yaml",
+    "configs/main/config_repos/config_llm_DafnyVMC_TFIDFPlaceholder.yaml",
+    "configs/main/config_repos/config_llm_DafnyVMC_EmbeddedPlaceholder.yaml",
+    # "configs/main/config_repos/config_llm_DafnyVMC_dynamic.yaml",
+    # "configs/main/config_repos/config_llm_DafnyVMC_placeholder.yaml",
+    # "configs/main/config_repos/config_llm_DafnyVMC_randomExample.yaml",
 ]
 
 benchmarks = {}

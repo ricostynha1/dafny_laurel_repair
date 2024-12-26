@@ -8,8 +8,10 @@ from token_wrapper import call_tokenizer_csharp, parse_token_output
 from dafny_utils import extract_dafny_functions
 
 
+from similarity import embedding_lib
 from similarity.mss import mss
 from similarity.get_distance_matrix import compute_clustering_unsave
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 class ExamplesSelector:
@@ -27,6 +29,57 @@ class ExamplesSelector:
         if config_prompt["Type"] == "FileProvided":
             self.examples = self.init_file_provided_examples(config_prompt)
             self.nature = "FileProvided"
+        if config_prompt["Type"] == "Embedding":
+            self.examples = self.init_embedding_examples(config_prompt)
+            self.nature = "Embedding"
+        if config_prompt["Type"] == "TFIDF":
+            print("INIT TFIDF")
+            self.examples = self.init_tfidf(config_prompt)
+            self.nature = "TFIDF"
+
+    def init_embedding_examples(self, config_prompt):
+        # Check if we have the tokens already
+        training_file = config_prompt["Context"]["Training_file"]
+        token_file = training_file + ".method_string_embedding.pkl"
+        self.tokens_df, recompute = get_string_df(training_file)
+        method_tokens = self.tokens_df["Method String"].to_list()
+        # if isinstance(self.tokens_df["Method String"][0], str):
+        #     method_tokens = (
+        #         self.tokens_df["Method Tokens"].apply(ast.literal_eval).to_list()
+        #     )
+        recompute = False
+        self.embedding = compute_embedding(method_tokens, token_file, force=recompute)
+
+    def init_tfidf(self, config_prompt):
+        # Check if we have the tokens already
+        training_file = config_prompt["Context"]["Training_file"]
+        # token_file = training_file + ".method_tokens.pkl"
+        self.max_size = config_prompt["Context"]["Max_size"]
+        self.tokens_df, recompute = get_tokens_df(training_file)
+        # self.tokens_df["Assertion Tokens"]).to_list()
+        self.tokens_df["Method Tokens"] = self.tokens_df["Method Tokens"].to_list()
+        if isinstance(self.tokens_df["Method Tokens"][0], str):
+            self.tokens_df["Method Tokens"] = (
+                self.tokens_df["Method Tokens"].apply(ast.literal_eval).to_list()
+            )
+        # training_file = config_prompt["Context"]["Training_file"]
+        # token_file = training_file + ".method_tokens.pkl"
+        # self.tokens_df, recompute = get_tokens_df(training_file)
+        # # self.tokens_df["Assertion Tokens"]).to_list()
+        # method_tokens = self.tokens_df["Method Tokens"].to_list()
+        # if isinstance(self.tokens_df["Method Tokens"][0], str):
+        #     method_tokens = (
+        #         self.tokens_df["Method Tokens"].apply(ast.literal_eval).to_list()
+        #     )
+        # recompute = False
+        # self.tokens_df, recompute = get_string_df(training_file)
+        # method_tokens = self.tokens_df["Method String"].to_list()
+        # # if isinstance(self.tokens_df["Method String"][0], str):
+        # #     method_tokens = (
+        # #         self.tokens_df["Method Tokens"].apply(ast.literal_eval).to_list()
+        # #     )
+        # recompute = False
+        # self.embedding = compute_embedding(method_tokens, token_file, force=recompute)
 
     def init_file_provided_examples(self, config_prompt):
         training_file = config_prompt["Context"]["Training_file"]
@@ -130,6 +183,59 @@ class ExamplesSelector:
         self.mspc.remove_row(obj_index)
         return clusters_elements
 
+    def find_k_nearest(self, method, k):
+        # method_tokens = parse_token_output(call_tokenizer_csharp(method))
+        method_embedding = embedding_lib.get_embedding(method)
+        similarities = self.embedding.apply(
+            lambda x: embedding_lib.cosine_similarity(x, method_embedding)
+        )
+        nearest_indices = similarities.nlargest(k)
+        return nearest_indices.index
+
+    def generate_tfidf_examples(self, method, threshold, question_prompt, current_file):
+        # Get tokens of method
+        method_tokens = parse_token_output(call_tokenizer_csharp(method))
+        vectorizer = TfidfVectorizer(analyzer=lambda x: x, lowercase=False)
+        # tmp = self.tokens_df["Method Tokens"].append(method_tokens)
+        self.tokens_df["all_tokens"] = self.tokens_df["Method Tokens"].apply(
+            lambda x: flatten_first_element(x)
+        )
+        str_token_method = flatten_first_element(method_tokens)
+        X = vectorizer.fit_transform(
+            pd.concat([self.tokens_df["all_tokens"], pd.Series([str_token_method])])
+        )
+
+        X1 = X[: len(self.tokens_df["Method Tokens"])]
+        X2 = X[len(self.tokens_df["Method Tokens"]) :]
+
+        self.tokens_df["tfidf"] = [x.toarray().flatten() for x in X1]
+
+        tmp_tfidf = [x.toarray().flatten() for x in X2]
+        tfidf = tmp_tfidf[0]
+        similarities = self.tokens_df["tfidf"].apply(
+            lambda x: embedding_lib.cosine_similarity(x, tfidf)
+        )
+        clusters_elements = similarities.nlargest(threshold)
+        examples = []
+        for elements in clusters_elements.index:
+            question, assertion = self.build_example(
+                elements, question_prompt, current_file=current_file
+            )
+            examples.append({"Question": question, "Answer": assertion})
+        return examples
+
+    def generate_embedded_examples(
+        self, method, threshold, question_prompt, current_file
+    ):
+        clusters_elements = self.find_k_nearest(method, threshold)
+        examples = []
+        for elements in clusters_elements:
+            question, assertion = self.build_example(
+                elements, question_prompt, current_file=current_file
+            )
+            examples.append({"Question": question, "Answer": assertion})
+        return examples
+
     def generate_dynamic_examples(
         self, method, threshold, question_prompt, current_file
     ):
@@ -158,6 +264,20 @@ class ExamplesSelector:
         return examples
 
 
+def flatten_first_element(xss):
+    return [item[1] for sublist in xss for item in sublist]
+
+
+def flatten(xss):
+    return [x for xs in xss for x in xs]
+
+
+def all_tokens(tokens):
+    result = [x["Item2"].strip() for x in flatten(tokens)]
+    result = [x for x in result if x]
+    return result
+
+
 def get_clusters_centers(mscp, threshold, min_cluster_length):
     clusters = mscp.clusters_by_k(threshold)
 
@@ -184,6 +304,27 @@ def process_method(original_file, original_method):
     )
     tokens = parse_token_output(call_tokenizer_csharp(original_method_content))
     return original_method_content, tokens
+
+
+def get_string_df(training_file):
+    df_non_verified = pd.read_csv(training_file)
+    recompute = False
+    if "Method String" not in df_non_verified.columns:
+        methods_string = []
+        for _, row in df_non_verified.iterrows():
+            new_method_path = os.path.join(
+                os.getcwd() + "/results/" + os.path.basename(row["New Method File"])
+            )
+            with open(new_method_path, "r") as f:
+                method_file_content = f.read()
+            method_content = extract_dafny_functions(
+                method_file_content, row["New Method"]
+            )
+            methods_string.append(method_content)
+        df_non_verified["Method String"] = methods_string
+        recompute = True
+    df_non_verified.to_csv(training_file, index=False)
+    return df_non_verified, recompute
 
 
 def get_tokens_df(training_file):
@@ -232,6 +373,22 @@ def compute_clustering(suggestions, pickle_file, force=False):
     with open(pickle_file, "wb") as f:
         pickle.dump(clustering, f)
     return clustering
+
+
+def compute_embedding(suggestions, pickle_file, force=False):
+    if os.path.exists(pickle_file) and not force:
+        with open(pickle_file, "rb") as f:
+            try:
+                return pickle.load(f)
+            except Exception as e:
+                print(
+                    f"Error loading pickle file, try recomputing the cluster by setting force=True: {e}, file: {pickle_file}"
+                )
+                raise
+    embedding = pd.Series([embedding_lib.get_embedding(x) for x in suggestions])
+    with open(pickle_file, "wb") as f:
+        pickle.dump(embedding, f)
+    return embedding
 
 
 def build_question(question, method_to_fix, assertion):

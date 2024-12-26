@@ -9,10 +9,12 @@ dataset = "cedar"
 # dataset = "libraries"
 
 configs = [
-    "configs/main/config_repos/config_llm_cedar_dynamicPlaceholder.yaml",
-    "configs/main/config_repos/config_llm_cedar_dynamic.yaml",
-    "configs/main/config_repos/config_llm_cedar_randomExamples.yaml",
-    "configs/main/config_repos/config_llm_cedar_placeholder.yaml",
+    # "configs/main/config_repos/config_llm_cedar_dynamicPlaceholder.yaml",
+    "configs/main/config_repos/config_llm_cedar_TFIDFPlaceholder.yaml",
+    "configs/main/config_repos/config_llm_cedar_EmbeddedPlaceholder.yaml",
+    # "configs/main/config_repos/config_llm_cedar_dynamic.yaml",
+    # "configs/main/config_repos/config_llm_cedar_randomExamples.yaml",
+    # "configs/main/config_repos/config_llm_cedar_placeholder.yaml",
     # "configs/main/config_repos/config_llm_libraries_dynamic.yaml",
     # "configs/main/config_repos/config_llm_libraries_placeholder.yaml",
     # "configs/main/config_repos/config_llm_libraries_randomExamples.yaml",

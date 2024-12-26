@@ -13,10 +13,12 @@ configs = [
     # "configs/main/config_repos/config_llm_cedar_dynamicPlaceholder.yaml",
     # "configs/main/config_repos/config_llm_cedar_placeholder.yaml",
     # "configs/main/config_repos/config_llm_cedar_randomExamples.yaml"
-    "configs/main/config_repos/config_llm_libraries_dynamic.yaml",
-    "configs/main/config_repos/config_llm_libraries_placeholder.yaml",
-    "configs/main/config_repos/config_llm_libraries_randomExamples.yaml",
-    "configs/main/config_repos/config_llm_libraries_dynamicPlaceholder.yaml",
+    # "configs/main/config_repos/config_llm_libraries_dynamic.yaml",
+    # "configs/main/config_repos/config_llm_libraries_placeholder.yaml",
+    # "configs/main/config_repos/config_llm_libraries_randomExamples.yaml",
+    # "configs/main/config_repos/config_llm_libraries_dynamicPlaceholder.yaml",
+    "configs/main/config_repos/config_llm_libraries_TFIDFPlaceholder.yaml",
+    # "configs/main/config_repos/config_llm_libraries_EmbeddedPlaceholder.yaml",
     # "configs/main/config_repos/config_llm_cedar_randomExamples.yaml"
     #    "configs/main/config_repos/config_llm_DafnyVMC_dynamicPlaceholder.yaml",
     #    "configs/main/config_repos/config_llm_DafnyVMC_dynamic.yaml",
@@ -90,5 +92,6 @@ for config in configs:
             output_file,
         ]
         command += ["-t", benchmarks[dataset]["training_file"][i][:]]
+
         print(" ".join(command))
         subprocess.run(command)

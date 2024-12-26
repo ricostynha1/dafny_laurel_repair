@@ -30,7 +30,12 @@ class Llm_prompt:
             with system():
                 messages.append({"role": "system", "content": system_prompt})
                 chat += system_prompt
-        if example_selector is not None and example_selector.nature != "Dynamic":
+        if (
+            example_selector is not None
+            and example_selector.nature != "Dynamic"
+            and example_selector.nature != "Embedding"
+            and example_selector.nature != "TFIDF"
+        ):
             for example in example_selector.examples:
                 with user():
                     chat += example["Question"]
@@ -101,6 +106,14 @@ class Llm_prompt:
         examples = []
         if example_selector.nature == "Dynamic":
             examples = example_selector.generate_dynamic_examples(
+                method, threshold, config_prompt["Fix_prompt"], program_to_fix
+            )
+        elif example_selector.nature == "Embedding":
+            examples = example_selector.generate_embedded_examples(
+                method, threshold, config_prompt["Fix_prompt"], program_to_fix
+            )
+        elif example_selector.nature == "TFIDF":
+            examples = example_selector.generate_tfidf_examples(
                 method, threshold, config_prompt["Fix_prompt"], program_to_fix
             )
         for example in examples:

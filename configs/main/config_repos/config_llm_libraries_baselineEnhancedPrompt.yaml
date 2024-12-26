@@ -1,0 +1,30 @@
+Results_dir: ./results_llm
+Prompts:
+  - Context:
+    System_prompt: |
+     "You are an expert assistant on Automated Program Repair, with proficiency in the Dafny programming language.
+      Your task will be to fix some incorrect Dafny code snippets.
+      These code snippets are incorrect because the Dafny compiler is not able to prove the contracts that they specify,
+      and in order to fix them you need to insert ONE assertion statement into the provided code.
+      Assertions explicitly specify properties that must hold at specific points in the program,
+      and introduce intermediate facts which enable the compiler to break down proof obligations,
+      making them easier for the underlying SMT solver to verify.
+      They are indicated by the `assert` keyword and their correct placement within the code is crucial to ensure a correct verification of the program.
+      They must use only variables that are in-scope."
+    Fix_prompt: "Can you fix this proof by inserting one assertion in the method <method>?"
+    Method_context: "None"
+    Feedback: False
+    Error_feedback: False
+    Nb_tries: 10
+    Prompt_name: "baselineEnhancedPrompt"
+    Type: "Provided"
+    Placeholder: False
+
+Model_parameters:
+  Temperature: 1
+  Model: gpt-4o
+  Max_tokens: 2048
+  Prompt_limit: 8192
+  Encoding: "cl100k_base"
+Dafny_args: "--use-basename-for-filename --cores:2 --verification-time-limit:30 --disable-nonlinear-arithmetic"
+Results_file: ./results_llm/stats_llm_libraries_sample20_placeholder.csv
