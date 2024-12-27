@@ -117,13 +117,13 @@ def generate_fix_llm(
                 csv_writer,
                 notebook_url,
                 examples_selectors,
-                row["Original File"],
+                row["Original Method File"],
             )
             success_count += 1 if success else 0
         except Exception as e:
             traceback_str = traceback.format_exc()
             logger.error(f"An error occurred: {e}\n{traceback_str}")
-        cleanup_environment(tmp_original_file_location, row["Original File"])
+        cleanup_environment(tmp_original_file_location, row["Original Method File"])
         logger.info(f"Success rate: {success_count}/{method_processed}")
         method_processed += 1
 
@@ -414,7 +414,7 @@ def process_method(
 
 
 def setup_verification_environment(config, row, index=0):
-    original_filepath = row["Original File"]
+    original_filepath = row["Original Method File"]
     tmp_original_file_location = shutil.move(
         original_filepath,
         os.path.join(config["Results_dir"], os.path.basename(original_filepath)),

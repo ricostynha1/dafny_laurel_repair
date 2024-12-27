@@ -137,8 +137,8 @@ class ExamplesSelector:
         return examples
 
     def build_example(self, center, question_prompt, current_file=""):
-        if os.path.exists(self.tokens_df["Original File"][center]):
-            with open(self.tokens_df["Original File"][center]) as f:
+        if os.path.exists(self.tokens_df["Original Method File"][center]):
+            with open(self.tokens_df["Original Method File"][center]) as f:
                 original_file_content = f.read()
         elif current_file != "":
             with open(current_file) as f:

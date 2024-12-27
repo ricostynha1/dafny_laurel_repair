@@ -37,6 +37,7 @@ exclude = [
   ".ipynb_checkpoints",
   ".pre-commit-config.yaml",
   "tests_package/ressources",
+  "DafnyGym",
 ]
 
 [tool.black]
