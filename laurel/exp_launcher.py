@@ -44,7 +44,7 @@ if __name__ == "__main__":
                 "poetry",
                 "run",
                 "python",
-                "src/test_harness.py",
+                "laurel/laurel_main.py",
                 "llm",
                 config,  # Replace with the name of the config
                 "-p",

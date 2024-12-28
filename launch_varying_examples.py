@@ -92,7 +92,7 @@ for config in configs:
             "poetry",
             "run",
             "python",
-            "src/test_harness.py",
+            "laurel/laurel_main.py",
             "llm",
             config,
             "-p",

@@ -1,6 +1,5 @@
 [tool.poetry]
-name = "proof-repair"
-package-mode = false
+name = "laurel"
 version = "0.1.0"
 description = "Tool to automatically fix Dafny proofs"
 authors = ["emugnier <emugnier@ucsd.edu>"]
@@ -59,5 +58,6 @@ exclude = '''
 '''
 
 [tool.poetry.scripts]
-pythonpath = "tests"
-test = 'tests:test_main.__main__'
+#laurel = "laurel.laurel_main:main"
+# pythonpath = "tests"
+#test = 'tests:test_main.__main__'

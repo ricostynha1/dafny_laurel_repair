@@ -5,7 +5,7 @@ import subprocess
 class TestsPruning(unittest.TestCase):
     def test_tool_output(self):
         # Define your tool command with specific arguments
-        command = "poetry run python src/test_harness.py --disable_date prune-assert configs/config_pruning_test.yaml"
+        command = "poetry run python laurel/laurel_main.py --disable_date prune-assert configs/config_pruning_test.yaml"
 
         # Run the command and capture the output
         try:

@@ -3,6 +3,7 @@ import logging
 import os
 import shutil
 import subprocess
+
 from dafny_utils import (
     parse_assertion_results,
     replace_method,
