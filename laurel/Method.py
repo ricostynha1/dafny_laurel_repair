@@ -86,30 +86,6 @@ class Method:
         new_method = Method(fix_filename, self.method_name, index=self.index, type=type)
         return new_method
 
-    def compare(self, new_method):
-        if (
-            new_method.verification_result == "Correct"
-            and not self.verification_result == "Correct"
-        ):
-            return True, "SUCCESS: Second method verifies, and the first one does not."
-
-        if (
-            self.verification_result == "Correct"
-            and new_method.verification_result == "Correct"
-        ):
-            if new_method.verification_time < self.verification_time:
-                return (
-                    True,
-                    "SUCCESS: Second method verifies faster than the first one.",
-                )
-            else:
-                return (
-                    False,
-                    "FAILURE: Second method verifies slower than the first one.",
-                )
-
-        return False, "FAILURE: Second method does not verify."
-
     def run_verification(self, results_directory, additionnal_args=None):
         self.dafny_log_file = f"{results_directory}/{self.method_name}_{self.index}.txt"
         if self.type:
