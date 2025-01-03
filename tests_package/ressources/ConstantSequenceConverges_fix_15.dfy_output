@@ -1,7 +1,0 @@
-lemma ConstantSequenceConverges(constant: real)
-    ensures ConvergesTo(Sequences.Constant(constant), constant)
-  {
-    forall epsilon: real | epsilon > 0.0 ensures ExistsCloseSuffix(Sequences.Constant(constant), constant, epsilon) {
-<assertion> Insert assertion here </assertion>
-          }
-  }

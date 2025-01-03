@@ -1,7 +1,0 @@
-/usr/local/home/eric/dafny_repos/Dafny-VMC/src/Distributions/Uniform/SampleTerminates_fix_78.dfy(77,20): Error: the calculation step between the previous line and this line could not be proved
-   |
-77 |           n as real / (Helper.Power(2, Helper.Log2Floor(2 * n)) as real);
-   |                     ^
-
-
-Dafny program verifier finished with 1 verified, 1 error

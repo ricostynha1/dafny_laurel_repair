@@ -1,9 +1,0 @@
-LemmaSeqPrefixNeq_fix_51.dfy(257,6): Error: a precondition for this call could not be proved
-    |
-257 |       LemmaSeqPrefixNeq(xs, ys, i + 1);
-    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-LemmaSeqPrefixNeq_fix_51.dfy(237,13): Related location: this is the precondition that could not be proved
-    |
-237 |     requires ToNatRight(xs[..i]) != ToNatRight(ys[..i])
-    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
