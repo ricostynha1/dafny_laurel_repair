@@ -266,7 +266,6 @@ def process_method(
             )
             placeholder = "<assertion> Insert assertion here </assertion>"
             nb_placeholders = method_with_placeholder.count(placeholder)
-            logger.info(f"Number of placeholders possible: {nb_placeholders}")
         except Exception as e:
             traceback_str = traceback.format_exc()
             logger.error(f"An error occurred: {e}\n{traceback_str}")
@@ -295,7 +294,6 @@ def process_method(
                 prompt_length = prompt.get_prompt_length(
                     config["Model_parameters"]["Encoding"]
                 )
-                logger.info(f"Prompt length: {prompt_length}")
                 if new_method.verification_result == "Correct":
                     logger.info(f"Success with prompt {prompt_index} on try {i}")
                     success = True
@@ -353,7 +351,6 @@ def process_method(
                     prompt_length = prompt.get_prompt_length(
                         config["Model_parameters"]["Encoding"]
                     )
-                    logger.info(f"Prompt length: {prompt_length}")
                     method.move_to_results_directory(
                         os.path.dirname(original_method_file)
                     )
@@ -444,7 +441,6 @@ def get_new_method_content(fix_prompt, method_name):
 
 
 def cleanup_environment(tmp_original_file_location, original_file_path):
-    logger.info(f"Cleanup: {tmp_original_file_location} -> {original_file_path}")
     shutil.copy(tmp_original_file_location, original_file_path)
 
 
