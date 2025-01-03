@@ -26,8 +26,20 @@ Use a key
 ### Generate one assertion
 
 Example on one assertion generation that work
-Without example
-With example
+Without example:
+```bash
+make run_lib_baseline
+```
+
+With example:
+```bash
+make run_lib_similarity
+```
+
+View a report summary:
+```bash
+make launch_report
+```
 
 ## Step by step
 
@@ -41,3 +53,4 @@ Generate the graphs
 Structure of the code
 Algorithm for placeholder
 Algorithm for example selection
+DafnyGym
