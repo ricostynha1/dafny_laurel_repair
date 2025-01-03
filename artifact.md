@@ -22,10 +22,14 @@ Although unlikely, hardware differences might affect the verification results.
 
 Instruction for the Docker image
 Use a key
+Compile the C# code
+
+
+All of the following commands should be run in the Docker container.
 
 ### Generate one assertion
 
-Example on one assertion generation that work
+Example of assertion generation
 Without example:
 ```bash
 make run_lib_baseline
@@ -43,14 +47,99 @@ make launch_report
 
 ## Step by step
 
-How to write a config
-Laurel command
-The main script to run our experiments
-Generate the graphs
+### Laurel configuration
+
+To run the different experiments with different settings you can use the different configurations available in `configs/main`.
+They follow this format:
+```
+Results_dir: PATH_WHERE_TO_STORE_THE_RESULTS
+Prompts:
+  - Context:
+      Question_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
+      Training_file: DEFAULT_TRAINING_FILE_IF_NONE_IS_PROVIDED_USING_THE_t_OPTION
+      Max_size: MAXIMUM_NUMBER_OF_EXAMPLE
+    System_prompt: |
+      "You are a Dafny formal method expert.
+      You will be provided with a Dafny method indicated by the delimiter <method>
+      that does not verify.
+      Your task is to insert an assertion in the <assertion> placeholder to make it verify. Your answer must start with `assert`."
+    Fix_prompt: "Can you fix this proof by inserting one assertion in the <assertion> placeholder?"
+    Method_context: "None"
+    Feedback: True|False (Include error message in prompt)
+    Nb_tries: 10
+    Error_feedback: True|False (Provide the error if the assertion generated fails)
+    Prompt_name: "dynamicPlaceholder"
+    Type: TYPE_OF_EXAMPLE_SELECTION ["Dynamic", "Embedding", "TFIDF", "FileProvided"]
+    Placeholder: True
+
+Model_parameters:
+  # Same paramater as the OpenAI API
+  Temperature: 1
+  Model: gpt-4o
+  Max_tokens: 2048
+  Prompt_limit: 8192
+  Encoding: "cl100k_base"
+
+# Specific Dafny verification flags
+Dafny_args: "--library /usr/local/home/eric/dafny_repos/Dafny-VMC/src/**/*.dfy --resource-limit 20000"
+Results_file: ./results_llm/stats_llm_DafnyVMC_sample10_placeholder_4t.csv
+```
+
+### Running Laurel
+
+```sh
+python laurel_main.py llm <config_file> [options]
+```
+
+#### Arguments
+
+- `config_file`: The configuration file to run the LLM generation.
+
+Options:
+- `--pruning_results`, `-p`: CSV pruning results file.
+- `--output_file`, `-o`: Output result file.
+- `--training_file`, `-t`: Training file.
+- `--method_to_process`, `-m`: Index of the Method to process (integer).
+
+#### Example
+
+```sh
+python laurel_main.py llm config.yaml -p pruning.csv -o output.txt -t training.txt -m 1
+```
+
+### Main experiment script
+To facilitate the experiments, we created scripts that run laurel using the different configurations and benchmarks.
+
+To run the Placeholder experiments (RQ1 and RQ2):
+```sh
+make run_placeholder
+```
+
+To run the example selection (RQ3):
+```sh
+make run_example_selection
+```
+
+### Generate the graphs
 
 ## Reusability
 
-Structure of the code
-Algorithm for placeholder
-Algorithm for example selection
-DafnyGym
+### Structure of the code
+
+```
+.
+├── configs
+│   └── main
+│       └── config_repos # Configurations for the experiments
+├── fig
+├── laurel
+│   ├── placeholder_finder # Algorithm for placeholder
+│   ├── similarity # Algorithm for example selection
+│   │   ├── mss
+│   └── tokenizer_csharp # Convert Dafny code to Tokens
+├── logs
+├── notebooks
+├── results
+```
+
+### DafnyGym
