@@ -62,24 +62,6 @@ class ExamplesSelector:
             self.tokens_df["Method Tokens"] = (
                 self.tokens_df["Method Tokens"].apply(ast.literal_eval).to_list()
             )
-        # training_file = config_prompt["Context"]["Training_file"]
-        # token_file = training_file + ".method_tokens.pkl"
-        # self.tokens_df, recompute = get_tokens_df(training_file)
-        # # self.tokens_df["Assertion Tokens"]).to_list()
-        # method_tokens = self.tokens_df["Method Tokens"].to_list()
-        # if isinstance(self.tokens_df["Method Tokens"][0], str):
-        #     method_tokens = (
-        #         self.tokens_df["Method Tokens"].apply(ast.literal_eval).to_list()
-        #     )
-        # recompute = False
-        # self.tokens_df, recompute = get_string_df(training_file)
-        # method_tokens = self.tokens_df["Method String"].to_list()
-        # # if isinstance(self.tokens_df["Method String"][0], str):
-        # #     method_tokens = (
-        # #         self.tokens_df["Method Tokens"].apply(ast.literal_eval).to_list()
-        # #     )
-        # recompute = False
-        # self.embedding = compute_embedding(method_tokens, token_file, force=recompute)
 
     def init_file_provided_examples(self, config_prompt):
         training_file = config_prompt["Context"]["Training_file"]
@@ -270,12 +252,6 @@ def flatten_first_element(xss):
 
 def flatten(xss):
     return [x for xs in xss for x in xs]
-
-
-def all_tokens(tokens):
-    result = [x["Item2"].strip() for x in flatten(tokens)]
-    result = [x for x in result if x]
-    return result
 
 
 def get_clusters_centers(mscp, threshold, min_cluster_length):

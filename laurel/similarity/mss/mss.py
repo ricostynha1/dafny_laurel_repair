@@ -3,8 +3,6 @@ import os
 import numpy as np
 from scipy.cluster.hierarchy import linkage, fcluster
 
-HOLE = ("HOLE", "<__>")
-
 
 class MostSimilarSubsequence:
     """
@@ -255,12 +253,6 @@ class HierarchicalClustering:
                 print(f"distance: {obj_row[t_closest[i]]}")
                 t_select.append(t_closest[i])
         return None, t_select
-        clusters = self.top_k_clusters(threshold)
-        # clusters = self.clusters_by_k(threshold)
-        for i, cluster in enumerate(clusters):
-            if obj_idx in cluster:
-                return i, cluster
-        return None, None
 
     def centroid(self, cluster):
         # avg_dist = lambda p: sum(self.dist[p, q] for q in cluster) / len(cluster)
@@ -272,13 +264,6 @@ class HierarchicalClustering:
         radius = lambda p: max(self.dist[p, q] for q in cluster)
         ctr = min(cluster, key=radius)
         return ctr
-
-    def diff_exemplars(self, cluster):
-        if len(cluster) == 1:
-            return cluster[0], cluster[0]
-        ctr = self.centroid(cluster)
-        cluster = [c for c in cluster if c != ctr]
-        return ctr, max(cluster, key=lambda c: self.dist[ctr, c])
 
 
 def token_comp_dafny(t, k):
@@ -292,100 +277,3 @@ def token_comp_dafny(t, k):
 def line_comp(s, t):
     mss = MostSimilarSubsequence(s, t, token_comp_dafny)
     return mss.similarity("mean")
-
-
-def id_comp(s, t):
-    return 1 if s == t else 0
-
-
-def mss_comp_aux(base_comp):
-    def comp(s, t):
-        if not isinstance(s, list) or not isinstance(t, list):
-            return base_comp(s, t)
-        else:
-            mss = MostSimilarSubsequence(s, t, comp)
-            return mss.similarity("mean")
-
-    return comp
-
-
-def hole_metacomp(comp):
-    """
-    Given a comparison function `comp`, extends it to compare holes.
-    The behavior of holes is as wildcards: they match anything exactly i.e. with value 1.
-    """
-
-    def hole_comp(s, t):
-        if s == HOLE or t == HOLE:
-            return 0
-        else:
-            return comp(s, t)
-
-    return hole_comp
-
-
-def mss_anti_unify(s, t, base_comp):
-    """
-    Given two sequences `s` and `t`, return a sequence `u` that is the anti-unification of `s` and `t`.
-    """
-    if not isinstance(s, list) or not isinstance(t, list):
-        # # maybe check if token_comp is zero then return HOLE
-        # if token_comp(s, t) == 1:
-        #     return s
-        # else:
-        #     return HOLE
-        if base_comp(s, t) == 0:
-            return HOLE
-        else:
-            # these should always be tokens in this case, and we make the choice to always return the first one
-            if not isinstance(s, list):
-                return s
-            else:
-                return t
-    else:
-        mss_res = MostSimilarSubsequence(s, t, mss_comp_aux(base_comp))
-        # mss = MostSimilarSubsequence(s, t, hole_metacomp(mss_comp))
-        u = []
-        ci, cj = 0, 0
-        for i, j in zip(mss_res.s_sub, mss_res.t_sub):
-            holes = max(i - ci, j - cj)
-            u += [HOLE for _ in range(holes)]
-            u.append(mss_anti_unify(s[i], t[j], base_comp))
-            ci, cj = i + 1, j + 1
-        holes = max(len(s) - ci, len(t) - cj)
-        u += [HOLE for _ in range(holes)]
-        return u
-
-
-def mss_anti_unify_many(sggs, base_comp):
-    """
-    Given a list of sequences `sggs`, return a sequence `u` that is the anti-unification of all `sggs`.
-    """
-    if len(sggs) == 0:
-        return []
-    u = sggs[0]
-    for sgg in sggs[1:]:
-        u = mss_anti_unify(u, sgg, base_comp)
-    return u
-
-
-def simplify_sketch(sketch):
-    """
-    Given a sketch, simplify it by merging contiguous holes, and doing so recursively.
-    """
-    if not isinstance(sketch, list):
-        return sketch
-    else:
-        simplified = []
-        i = 0
-        while i < len(sketch):
-            if sketch[i] == HOLE:
-                j = i + 1
-                while j < len(sketch) and sketch[j] == HOLE:
-                    j += 1
-                simplified.append(HOLE)
-                i = j
-            else:
-                simplified.append(simplify_sketch(sketch[i]))
-                i += 1
-        return simplified
