@@ -9,6 +9,9 @@ This artifact contains:
 - the DafnyGym benchmark
 - scripts to run the paper experiments and generate the figures
 
+We are only going for the Available, Functionnal and maybe reusable badge.
+Our experiments take too much time and ressources to be fully reproduced.
+
 ## Hardware dependencies
 
 No particular hardware dependencies are required. The Docker image is less than 2GB, and the experiments can be run on a laptop.

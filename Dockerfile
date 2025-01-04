@@ -47,5 +47,9 @@ RUN pipx install poetry \
 # Clean up
 RUN rm -f dafny-4.3.0-x64-ubuntu-20.04.zip
 
+RUN git clone --recurse-submodules https://github.com/emugnier/dafny_repair.git
+WORKDIR SOMETHING
+RUN git checkout SOMETHING
+
 # Default command
 CMD ["/bin/bash"]
