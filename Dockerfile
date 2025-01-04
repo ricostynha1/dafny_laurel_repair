@@ -44,7 +44,7 @@ RUN curl https://pyenv.run | bash \
 
 # Install Poetry
 RUN pipx install poetry \
-    && pipx ensurepath \
+    && pipx ensurepath
 
 # Set env variable 
 ENV PATH="/root/.local/bin:$PATH"
