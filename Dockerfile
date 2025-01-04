@@ -20,6 +20,10 @@ RUN apt-get update && apt-get install -y \
     sudo \
     pipx \
     git \
+    python3.11 \
+    python3.11-venv \
+    python3.11-dev \
+    python3-pip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Dotnet
@@ -41,8 +45,12 @@ RUN curl https://pyenv.run | bash \
 # Install Poetry
 RUN pipx install poetry \
     && pipx ensurepath \
-    && export PATH="/root/.local/bin:$PATH" \
-    && poetry --version
+
+# Set env variable 
+ENV PATH="/root/.local/bin:$PATH"
+
+# Check poetry install
+RUN poetry --version
 
 # Clean up
 RUN rm -f dafny-4.3.0-x64-ubuntu-20.04.zip
