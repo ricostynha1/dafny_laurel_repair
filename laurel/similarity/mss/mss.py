@@ -152,7 +152,6 @@ class HierarchicalClustering:
         print(f"Using {n_cpus} cpus for computing distances")
 
         def distance_across_row(reference_idx):
-            print(f"Computing distances for row {reference_idx}")
             row = np.zeros(n)
             for i in range(n):
                 if i > reference_idx:
@@ -176,7 +175,6 @@ class HierarchicalClustering:
         n = len(self.objs)
 
         def distance_across_row(reference_idx):
-            print(f"Computing distances for row {reference_idx}")
             row = np.zeros(n)
             for i in range(n):
                 row[i] = 1 - self.comp(self.objs[reference_idx], self.objs[i])
