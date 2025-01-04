@@ -144,5 +144,3 @@ make run_example_selection
 ├── notebooks
 ├── results
 ```
-
-### DafnyGym
