@@ -2,15 +2,17 @@
 
 ## Intro
 
-This artifact contains:
+This artifact contains the github repository `https://github.com/emugnier/dafny_repair` also available on Zenodo with:
 - the Laurel tool
     - the assertion placeholder algorithm
     - the algorithm for in-context example selection
 - the DafnyGym benchmark
-- scripts to run the paper experiments and generate the figures
+- scripts to run the paper experiments
 
 We are only going for the Available, Functionnal and maybe reusable badge.
-Our experiments take too much time and ressources to be fully reproduced.
+Our experiments take 3 days to be fully reproduced, therefore we advise to reproduce the graphs using our saved results.
+
+**We are aware that they are issues with the Docker container, we are working on resolving them.**
 
 ## Hardware dependencies
 
@@ -23,30 +25,25 @@ Although unlikely, hardware differences might affect the verification results.
 
 ### Setup the Environment
 
-Instruction for the Docker image
-Use a key
-Compile the C# code
+Add the OpenAI key to the secrets file at `./secrets.yaml`:
+```
+OPENAI_API_KEY: HASH_OF_THE_KEY
+```
 
+Instruction for the Docker image:
+```sh
+docker build -t laurel
+docker run -it laurel
+```
 
 All of the following commands should be run in the Docker container.
 
 ### Generate one assertion
 
-Example of assertion generation
-Without example:
 ```bash
-make run_lib_baseline
+make gen_report_getting_started
 ```
-
-With example:
-```bash
-make run_lib_similarity
-```
-
-View a report summary:
-```bash
-make launch_report
-```
+You should now be able to click on the link that appears on your terminal and inspect the results.
 
 ## Step by step
 
@@ -117,13 +114,6 @@ To run the Placeholder experiments (RQ1 and RQ2):
 ```sh
 make run_placeholder
 ```
-
-To run the example selection (RQ3):
-```sh
-make run_example_selection
-```
-
-### Generate the graphs
 
 ## Reusability
 
