@@ -1,0 +1,3 @@
+[submodule "DafnyGym"]
+	path = DafnyGym
+	url = https://github.com/emugnier/DafnyGym.git
