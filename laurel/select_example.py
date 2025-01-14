@@ -126,11 +126,7 @@ class ExamplesSelector:
             with open(current_file) as f:
                 original_file_content = f.read()
         else:
-            new_method_path = os.path.join(
-                os.getcwd()
-                + "/results/"
-                + os.path.basename(self.tokens_df["New Method File"][center])
-            )
+            new_method_path = self.tokens_df["New Method File"][center]
             # the assertion that we are looking for is Missing!
             with open(new_method_path) as f:
                 original_file_content = f.read()
@@ -288,9 +284,7 @@ def get_string_df(training_file):
     if "Method String" not in df_non_verified.columns:
         methods_string = []
         for _, row in df_non_verified.iterrows():
-            new_method_path = os.path.join(
-                os.getcwd() + "/results/" + os.path.basename(row["New Method File"])
-            )
+            new_method_path = row["New Method File"]
             with open(new_method_path, "r") as f:
                 method_file_content = f.read()
             method_content = extract_dafny_functions(
@@ -316,10 +310,7 @@ def get_tokens_df(training_file):
     if "Method Tokens" not in df_non_verified.columns:
         methods_tokens = []
         for _, row in df_non_verified.iterrows():
-            new_method_path = os.path.join(
-                os.getcwd() + "/results/" + os.path.basename(row["New Method File"])
-            )
-            _, method_tokens = process_method(new_method_path, row["New Method"])
+            _, method_tokens = process_method(row["New Method File"], row["New Method"])
             methods_tokens.append(method_tokens)
         df_non_verified["Method Tokens"] = methods_tokens
         recompute = True

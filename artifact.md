@@ -25,7 +25,7 @@ Although unlikely, hardware differences might affect the verification results.
 
 ### Setup the Environment
 
-Add the OpenAI key to the secrets file at `./secrets.yaml`:
+Add the OpenAI key to the secrets file at `./.secrets.yaml`:
 ```
 OPENAI_API_KEY: HASH_OF_THE_KEY
 ```
