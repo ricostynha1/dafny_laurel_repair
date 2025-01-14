@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y \
     python3.11-venv \
     python3.11-dev \
     python3-pip \
+    zsh \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Dotnet
@@ -34,7 +35,9 @@ RUN apt-get update && apt-get install -y software-properties-common \
 # Install Dafny
 RUN wget https://github.com/dafny-lang/dafny/releases/download/v4.3.0/dafny-4.3.0-x64-ubuntu-20.04.zip \
     && unzip dafny-4.3.0-x64-ubuntu-20.04.zip \
-    && export PATH="$PATH:$(pwd)/dafny-4.3.0"
+    && rm -f dafny-4.3.0-x64-ubuntu-20.04.zip
+ENV PATH="/dafny:$PATH"
+RUN dafny --version
 
 # Install Pyenv
 RUN curl https://pyenv.run | bash \
@@ -45,19 +48,14 @@ RUN curl https://pyenv.run | bash \
 # Install Poetry
 RUN pipx install poetry \
     && pipx ensurepath
-
-# Set env variable 
 ENV PATH="/root/.local/bin:$PATH"
-
-# Check poetry install
 RUN poetry --version
 
-# Clean up
-RUN rm -f dafny-4.3.0-x64-ubuntu-20.04.zip
 
+# Get Laurel source code
 RUN git clone --recurse-submodules https://github.com/emugnier/dafny_repair.git
-WORKDIR SOMETHING
-RUN git checkout SOMETHING
+WORKDIR dafny_repair
+RUN mkdir logs && touch logs/pruning.log
 
 # Default command
 CMD ["/bin/bash"]

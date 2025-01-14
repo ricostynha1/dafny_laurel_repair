@@ -32,8 +32,8 @@ OPENAI_API_KEY: HASH_OF_THE_KEY
 
 Instruction for the Docker image:
 ```sh
-docker build -t laurel
-docker run -it laurel
+docker build -t laurel .
+docker run -it -v ./.secrets.yaml:/dafny_repair/.secrets.yaml laurel
 ```
 
 All of the following commands should be run in the Docker container.
