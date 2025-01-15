@@ -26,7 +26,7 @@ run_vmc_similarity: poetry_install
 	poetry run python laurel/laurel_main.py llm configs/main/config_repos/config_llm_DafnyVMC_dynamicPlaceholder.yaml -p DafnyGym/vmc.csv -t DafnyGym/tmp_vmc/training_vmc_k33_3.csv -m 33 -o results_llm/vmc_similarity.csv
 
 gen_report_getting_started: run_lib_baseline run_lib_similarity run_cedar_baseline run_cedar_similarity run_vmc_baseline run_vmc_similarity
-	voila --Voila.ip='0.0.0.0' --autoreload=True --port 8866 ./notebooks/dashboard.ipynb && voila --Voila.ip='0.0.0.0' --autoreload=True --port 8889 ./notebooks/getting_started_report.ipynb
+	poetry run voila --Voila.ip='0.0.0.0' --autoreload=True --port 8866 ./notebooks/dashboard.ipynb & poetry run voila --Voila.ip='0.0.0.0' --autoreload=True --port 8889 ./notebooks/getting_started_report.ipynb
 
 exp_placeholder:
 	 python laurel/exp_launcher.py ./configs/main/exp.yaml
