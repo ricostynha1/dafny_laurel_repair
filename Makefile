@@ -28,5 +28,8 @@ run_vmc_similarity: poetry_install
 gen_report_getting_started: run_lib_baseline run_lib_similarity run_cedar_baseline run_cedar_similarity run_vmc_baseline run_vmc_similarity
 	poetry run voila --Voila.ip='0.0.0.0' --autoreload=True --port 8866 ./notebooks/dashboard.ipynb & poetry run voila --Voila.ip='0.0.0.0' --autoreload=True --port 8889 ./notebooks/getting_started_report.ipynb
 
+generate_graphs: poetry_install
+	poetry run python scripts/placeholder.py && poetry run python scripts/similarity.py
+
 exp_placeholder:
 	 python laurel/exp_launcher.py ./configs/main/exp.yaml

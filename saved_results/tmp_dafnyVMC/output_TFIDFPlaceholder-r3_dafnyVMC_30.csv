@@ -1,0 +1,211 @@
+Index,Original Method File,Original Method,Original Method Time,Original Method Result,Original Result File,Original Error Message,Original Error Message File,New Method File,New Method,New Method Time,New Method Result,New Method Result File,New Method Error Message,New Method Error Message File,Prompt File,Prompt Length,Prompt Index,Prompt name,Error message,Feedback,Try,Number placeholders,Placeholder position,Diff,Url
+0,.//results/WhileUnroll_fix_89.dfy,WhileUnroll,5.460873,Errors,./results_llm/WhileUnroll_0.txt,assertion might not hold,./results_llm/WhileUnroll__0_error.txt,./results_llm/WhileUnroll_fix_TFIDFPlaceholder_0_1.dfy,WhileUnroll,,,./results_llm/WhileUnroll_fix_0.txt,Duplicate member name: WhileUnrollIfTerminates,./results_llm/WhileUnroll_fix_0_error.txt,/usr/local/home/eric/dafny_repos/Dafny-VMC/src/ProbabilisticProgramming/WhileUnroll_fix_89.dfy_0_1_TFIDFPlaceholder_prompt,2742,1,TFIDFPlaceholder,,False,1,0,1,"lemma WhileUnrollIfTerminates<A(!new)>(condition: A -> bool, body: A -> Monad.Hurd<A>, init: A, s: Rand.Bitstream, fuel: nat, loop: Monad.Result<A>, unrolled: Monad.Result<A>)
+requires fuel == LeastFuel(condition, body, init, s)
+requires unrolled == (if condition(init) then Monad.Bind(body(init), While(condition, body)) else Monad.Return(init))(s)
+if condition(init) {
+match body(init)(s)
+case Diverging =>
+Monad.Diverging;
+unrolled;
+}
+case Result(init', s') =>
+calc {
+loop;
+{ WhileUnrollIfConditionSatisfied(condition, body, init, s, init', s', loop, unrolled); }
+While(condition, body)(init')(s');
+unrolled;
+}
+} else {
+calc {
+loop;
+Monad.Result(init, s);
+",http://c10-10.sysnet.ucsd.edu:8866/?results=.%2Fresults_llm%2Ftmp_dafnyVMC%2Foutput_TFIDFPlaceholder-r3_dafnyVMC_30.csv&assertions=.%2Fresults%2Ftmp_dafnyVMC%2Ftesting_dafnyVMC_k33_30.csv&method=0
+0,.//results/WhileUnroll_fix_89.dfy,WhileUnroll,5.460873,Errors,./results_llm/WhileUnroll_0.txt,assertion might not hold,./results_llm/WhileUnroll__0_error.txt,./results_llm/WhileUnroll_fix_TFIDFPlaceholder_0_2.dfy,WhileUnroll,,,./results_llm/WhileUnroll_fix_0.txt,Duplicate member name: WhileUnrollIfTerminates,./results_llm/WhileUnroll_fix_0_error.txt,/usr/local/home/eric/dafny_repos/Dafny-VMC/src/ProbabilisticProgramming/WhileUnroll_fix_89.dfy_0_1_TFIDFPlaceholder_prompt,2746,1,TFIDFPlaceholder,,False,2,0,1,"lemma WhileUnrollIfTerminates<A(!new)>(condition: A -> bool, body: A -> Monad.Hurd<A>, init: A, s: Rand.Bitstream, fuel: nat, loop: Monad.Result<A>, unrolled: Monad.Result<A>)
+requires fuel == LeastFuel(condition, body, init, s)
+requires unrolled == (if condition(init) then Monad.Bind(body(init), While(condition, body)) else Monad.Return(init))(s)
+if condition(init) {
+match body(init)(s)
+case Diverging =>
+Monad.Diverging;
+unrolled;
+}
+case Result(init', s') =>
+calc {
+loop;
+{ WhileUnrollIfConditionSatisfied(condition, body, init, s, init', s', loop, unrolled); }
+While(condition, body)(init')(s');
+unrolled;
+}
+} else {
+calc {
+loop;
+Monad.Result(init, s);
+",http://c10-10.sysnet.ucsd.edu:8866/?results=.%2Fresults_llm%2Ftmp_dafnyVMC%2Foutput_TFIDFPlaceholder-r3_dafnyVMC_30.csv&assertions=.%2Fresults%2Ftmp_dafnyVMC%2Ftesting_dafnyVMC_k33_30.csv&method=0
+0,.//results/WhileUnroll_fix_89.dfy,WhileUnroll,5.460873,Errors,./results_llm/WhileUnroll_0.txt,assertion might not hold,./results_llm/WhileUnroll__0_error.txt,./results_llm/WhileUnroll_fix_TFIDFPlaceholder_0_3.dfy,WhileUnroll,,,./results_llm/WhileUnroll_fix_0.txt,Duplicate member name: WhileUnrollIfTerminates,./results_llm/WhileUnroll_fix_0_error.txt,/usr/local/home/eric/dafny_repos/Dafny-VMC/src/ProbabilisticProgramming/WhileUnroll_fix_89.dfy_0_1_TFIDFPlaceholder_prompt,2742,1,TFIDFPlaceholder,,False,3,0,1,"lemma WhileUnrollIfTerminates<A(!new)>(condition: A -> bool, body: A -> Monad.Hurd<A>, init: A, s: Rand.Bitstream, fuel: nat, loop: Monad.Result<A>, unrolled: Monad.Result<A>)
+requires fuel == LeastFuel(condition, body, init, s)
+requires unrolled == (if condition(init) then Monad.Bind(body(init), While(condition, body)) else Monad.Return(init))(s)
+if condition(init) {
+match body(init)(s)
+case Diverging =>
+Monad.Diverging;
+unrolled;
+}
+case Result(init', s') =>
+calc {
+loop;
+{ WhileUnrollIfConditionSatisfied(condition, body, init, s, init', s', loop, unrolled); }
+While(condition, body)(init')(s');
+unrolled;
+}
+} else {
+calc {
+loop;
+Monad.Result(init, s);
+",http://c10-10.sysnet.ucsd.edu:8866/?results=.%2Fresults_llm%2Ftmp_dafnyVMC%2Foutput_TFIDFPlaceholder-r3_dafnyVMC_30.csv&assertions=.%2Fresults%2Ftmp_dafnyVMC%2Ftesting_dafnyVMC_k33_30.csv&method=0
+0,.//results/WhileUnroll_fix_89.dfy,WhileUnroll,5.460873,Errors,./results_llm/WhileUnroll_0.txt,assertion might not hold,./results_llm/WhileUnroll__0_error.txt,./results_llm/WhileUnroll_fix_TFIDFPlaceholder_0_4.dfy,WhileUnroll,,,./results_llm/WhileUnroll_fix_0.txt,Duplicate member name: WhileUnrollIfTerminates,./results_llm/WhileUnroll_fix_0_error.txt,/usr/local/home/eric/dafny_repos/Dafny-VMC/src/ProbabilisticProgramming/WhileUnroll_fix_89.dfy_0_1_TFIDFPlaceholder_prompt,2750,1,TFIDFPlaceholder,,False,4,0,1,"lemma WhileUnrollIfTerminates<A(!new)>(condition: A -> bool, body: A -> Monad.Hurd<A>, init: A, s: Rand.Bitstream, fuel: nat, loop: Monad.Result<A>, unrolled: Monad.Result<A>)
+requires fuel == LeastFuel(condition, body, init, s)
+requires unrolled == (if condition(init) then Monad.Bind(body(init), While(condition, body)) else Monad.Return(init))(s)
+if condition(init) {
+match body(init)(s)
+case Diverging =>
+Monad.Diverging;
+unrolled;
+}
+case Result(init', s') =>
+calc {
+loop;
+{ WhileUnrollIfConditionSatisfied(condition, body, init, s, init', s', loop, unrolled); }
+While(condition, body)(init')(s');
+unrolled;
+}
+} else {
+calc {
+loop;
+Monad.Result(init, s);
+",http://c10-10.sysnet.ucsd.edu:8866/?results=.%2Fresults_llm%2Ftmp_dafnyVMC%2Foutput_TFIDFPlaceholder-r3_dafnyVMC_30.csv&assertions=.%2Fresults%2Ftmp_dafnyVMC%2Ftesting_dafnyVMC_k33_30.csv&method=0
+0,.//results/WhileUnroll_fix_89.dfy,WhileUnroll,5.460873,Errors,./results_llm/WhileUnroll_0.txt,assertion might not hold,./results_llm/WhileUnroll__0_error.txt,./results_llm/WhileUnroll_fix_TFIDFPlaceholder_0_5.dfy,WhileUnroll,,,./results_llm/WhileUnroll_fix_0.txt,Duplicate member name: WhileUnrollIfTerminates,./results_llm/WhileUnroll_fix_0_error.txt,/usr/local/home/eric/dafny_repos/Dafny-VMC/src/ProbabilisticProgramming/WhileUnroll_fix_89.dfy_0_1_TFIDFPlaceholder_prompt,2748,1,TFIDFPlaceholder,,False,5,0,1,"lemma WhileUnrollIfTerminates<A(!new)>(condition: A -> bool, body: A -> Monad.Hurd<A>, init: A, s: Rand.Bitstream, fuel: nat, loop: Monad.Result<A>, unrolled: Monad.Result<A>)
+requires fuel == LeastFuel(condition, body, init, s)
+requires unrolled == (if condition(init) then Monad.Bind(body(init), While(condition, body)) else Monad.Return(init))(s)
+if condition(init) {
+match body(init)(s)
+case Diverging =>
+Monad.Diverging;
+unrolled;
+}
+case Result(init', s') =>
+calc {
+loop;
+{ WhileUnrollIfConditionSatisfied(condition, body, init, s, init', s', loop, unrolled); }
+While(condition, body)(init')(s');
+unrolled;
+}
+} else {
+calc {
+loop;
+Monad.Result(init, s);
+",http://c10-10.sysnet.ucsd.edu:8866/?results=.%2Fresults_llm%2Ftmp_dafnyVMC%2Foutput_TFIDFPlaceholder-r3_dafnyVMC_30.csv&assertions=.%2Fresults%2Ftmp_dafnyVMC%2Ftesting_dafnyVMC_k33_30.csv&method=0
+0,.//results/WhileUnroll_fix_89.dfy,WhileUnroll,5.460873,Errors,./results_llm/WhileUnroll_0.txt,assertion might not hold,./results_llm/WhileUnroll__0_error.txt,./results_llm/WhileUnroll_fix_TFIDFPlaceholder_0_6.dfy,WhileUnroll,,,./results_llm/WhileUnroll_fix_0.txt,Duplicate member name: WhileUnrollIfTerminates,./results_llm/WhileUnroll_fix_0_error.txt,/usr/local/home/eric/dafny_repos/Dafny-VMC/src/ProbabilisticProgramming/WhileUnroll_fix_89.dfy_0_1_TFIDFPlaceholder_prompt,2742,1,TFIDFPlaceholder,,False,6,0,1,"lemma WhileUnrollIfTerminates<A(!new)>(condition: A -> bool, body: A -> Monad.Hurd<A>, init: A, s: Rand.Bitstream, fuel: nat, loop: Monad.Result<A>, unrolled: Monad.Result<A>)
+requires fuel == LeastFuel(condition, body, init, s)
+requires unrolled == (if condition(init) then Monad.Bind(body(init), While(condition, body)) else Monad.Return(init))(s)
+if condition(init) {
+match body(init)(s)
+case Diverging =>
+Monad.Diverging;
+unrolled;
+}
+case Result(init', s') =>
+calc {
+loop;
+{ WhileUnrollIfConditionSatisfied(condition, body, init, s, init', s', loop, unrolled); }
+While(condition, body)(init')(s');
+unrolled;
+}
+} else {
+calc {
+loop;
+Monad.Result(init, s);
+",http://c10-10.sysnet.ucsd.edu:8866/?results=.%2Fresults_llm%2Ftmp_dafnyVMC%2Foutput_TFIDFPlaceholder-r3_dafnyVMC_30.csv&assertions=.%2Fresults%2Ftmp_dafnyVMC%2Ftesting_dafnyVMC_k33_30.csv&method=0
+0,.//results/WhileUnroll_fix_89.dfy,WhileUnroll,5.460873,Errors,./results_llm/WhileUnroll_0.txt,assertion might not hold,./results_llm/WhileUnroll__0_error.txt,./results_llm/WhileUnroll_fix_TFIDFPlaceholder_0_7.dfy,WhileUnroll,,,./results_llm/WhileUnroll_fix_0.txt,Duplicate member name: WhileUnrollIfTerminates,./results_llm/WhileUnroll_fix_0_error.txt,/usr/local/home/eric/dafny_repos/Dafny-VMC/src/ProbabilisticProgramming/WhileUnroll_fix_89.dfy_0_1_TFIDFPlaceholder_prompt,2743,1,TFIDFPlaceholder,,False,7,0,1,"lemma WhileUnrollIfTerminates<A(!new)>(condition: A -> bool, body: A -> Monad.Hurd<A>, init: A, s: Rand.Bitstream, fuel: nat, loop: Monad.Result<A>, unrolled: Monad.Result<A>)
+requires fuel == LeastFuel(condition, body, init, s)
+requires unrolled == (if condition(init) then Monad.Bind(body(init), While(condition, body)) else Monad.Return(init))(s)
+if condition(init) {
+match body(init)(s)
+case Diverging =>
+Monad.Diverging;
+unrolled;
+}
+case Result(init', s') =>
+calc {
+loop;
+{ WhileUnrollIfConditionSatisfied(condition, body, init, s, init', s', loop, unrolled); }
+While(condition, body)(init')(s');
+unrolled;
+}
+} else {
+calc {
+loop;
+Monad.Result(init, s);
+",http://c10-10.sysnet.ucsd.edu:8866/?results=.%2Fresults_llm%2Ftmp_dafnyVMC%2Foutput_TFIDFPlaceholder-r3_dafnyVMC_30.csv&assertions=.%2Fresults%2Ftmp_dafnyVMC%2Ftesting_dafnyVMC_k33_30.csv&method=0
+0,.//results/WhileUnroll_fix_89.dfy,WhileUnroll,5.460873,Errors,./results_llm/WhileUnroll_0.txt,assertion might not hold,./results_llm/WhileUnroll__0_error.txt,./results_llm/WhileUnroll_fix_TFIDFPlaceholder_0_8.dfy,WhileUnroll,,,./results_llm/WhileUnroll_fix_0.txt,Duplicate member name: WhileUnrollIfTerminates,./results_llm/WhileUnroll_fix_0_error.txt,/usr/local/home/eric/dafny_repos/Dafny-VMC/src/ProbabilisticProgramming/WhileUnroll_fix_89.dfy_0_1_TFIDFPlaceholder_prompt,2746,1,TFIDFPlaceholder,,False,8,0,1,"lemma WhileUnrollIfTerminates<A(!new)>(condition: A -> bool, body: A -> Monad.Hurd<A>, init: A, s: Rand.Bitstream, fuel: nat, loop: Monad.Result<A>, unrolled: Monad.Result<A>)
+requires fuel == LeastFuel(condition, body, init, s)
+requires unrolled == (if condition(init) then Monad.Bind(body(init), While(condition, body)) else Monad.Return(init))(s)
+if condition(init) {
+match body(init)(s)
+case Diverging =>
+Monad.Diverging;
+unrolled;
+}
+case Result(init', s') =>
+calc {
+loop;
+{ WhileUnrollIfConditionSatisfied(condition, body, init, s, init', s', loop, unrolled); }
+While(condition, body)(init')(s');
+unrolled;
+}
+} else {
+calc {
+loop;
+Monad.Result(init, s);
+",http://c10-10.sysnet.ucsd.edu:8866/?results=.%2Fresults_llm%2Ftmp_dafnyVMC%2Foutput_TFIDFPlaceholder-r3_dafnyVMC_30.csv&assertions=.%2Fresults%2Ftmp_dafnyVMC%2Ftesting_dafnyVMC_k33_30.csv&method=0
+0,.//results/WhileUnroll_fix_89.dfy,WhileUnroll,5.460873,Errors,./results_llm/WhileUnroll_0.txt,assertion might not hold,./results_llm/WhileUnroll__0_error.txt,./results_llm/WhileUnroll_fix_TFIDFPlaceholder_0_9.dfy,WhileUnroll,,,./results_llm/WhileUnroll_fix_0.txt,Duplicate member name: WhileUnrollIfTerminates,./results_llm/WhileUnroll_fix_0_error.txt,/usr/local/home/eric/dafny_repos/Dafny-VMC/src/ProbabilisticProgramming/WhileUnroll_fix_89.dfy_0_1_TFIDFPlaceholder_prompt,2746,1,TFIDFPlaceholder,,False,9,0,1,"lemma WhileUnrollIfTerminates<A(!new)>(condition: A -> bool, body: A -> Monad.Hurd<A>, init: A, s: Rand.Bitstream, fuel: nat, loop: Monad.Result<A>, unrolled: Monad.Result<A>)
+requires fuel == LeastFuel(condition, body, init, s)
+requires unrolled == (if condition(init) then Monad.Bind(body(init), While(condition, body)) else Monad.Return(init))(s)
+if condition(init) {
+match body(init)(s)
+case Diverging =>
+Monad.Diverging;
+unrolled;
+}
+case Result(init', s') =>
+calc {
+loop;
+{ WhileUnrollIfConditionSatisfied(condition, body, init, s, init', s', loop, unrolled); }
+While(condition, body)(init')(s');
+unrolled;
+}
+} else {
+calc {
+loop;
+Monad.Result(init, s);
+",http://c10-10.sysnet.ucsd.edu:8866/?results=.%2Fresults_llm%2Ftmp_dafnyVMC%2Foutput_TFIDFPlaceholder-r3_dafnyVMC_30.csv&assertions=.%2Fresults%2Ftmp_dafnyVMC%2Ftesting_dafnyVMC_k33_30.csv&method=0
+0,.//results/WhileUnroll_fix_89.dfy,WhileUnroll,5.460873,Errors,./results_llm/WhileUnroll_0.txt,assertion might not hold,./results_llm/WhileUnroll__0_error.txt,./results_llm/WhileUnroll_fix_TFIDFPlaceholder_0_10.dfy,WhileUnroll,,,./results_llm/WhileUnroll_fix_0.txt,Duplicate member name: WhileUnrollIfTerminates,./results_llm/WhileUnroll_fix_0_error.txt,/usr/local/home/eric/dafny_repos/Dafny-VMC/src/ProbabilisticProgramming/WhileUnroll_fix_89.dfy_0_1_TFIDFPlaceholder_prompt,2742,1,TFIDFPlaceholder,,False,10,0,1,"lemma WhileUnrollIfTerminates<A(!new)>(condition: A -> bool, body: A -> Monad.Hurd<A>, init: A, s: Rand.Bitstream, fuel: nat, loop: Monad.Result<A>, unrolled: Monad.Result<A>)
+requires fuel == LeastFuel(condition, body, init, s)
+requires unrolled == (if condition(init) then Monad.Bind(body(init), While(condition, body)) else Monad.Return(init))(s)
+if condition(init) {
+match body(init)(s)
+case Diverging =>
+Monad.Diverging;
+unrolled;
+}
+case Result(init', s') =>
+calc {
+loop;
+{ WhileUnrollIfConditionSatisfied(condition, body, init, s, init', s', loop, unrolled); }
+While(condition, body)(init')(s');
+unrolled;
+}
+} else {
+calc {
+loop;
+Monad.Result(init, s);
+",http://c10-10.sysnet.ucsd.edu:8866/?results=.%2Fresults_llm%2Ftmp_dafnyVMC%2Foutput_TFIDFPlaceholder-r3_dafnyVMC_30.csv&assertions=.%2Fresults%2Ftmp_dafnyVMC%2Ftesting_dafnyVMC_k33_30.csv&method=0

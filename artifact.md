@@ -33,7 +33,7 @@ OPENAI_API_KEY: HASH_OF_THE_KEY
 Instruction for the Docker image:
 ```sh
 docker build -t laurel .
-docker run -it -v ./.secrets.yaml:/dafny_repair/.secrets.yaml laurel
+docker run -it -v ./.secrets.yaml:/dafny_repair/.secrets.yaml -v ./fig:/dafny_repair/fig laurel
 ```
 
 All of the following commands should be run in the Docker container.
@@ -96,7 +96,7 @@ python laurel_main.py llm <config_file> [options]
 - `config_file`: The configuration file to run the LLM generation.
 
 Options:
-- `--pruning_results`, `-p`: CSV pruning results file.
+- `--pruning_results`, `-p`: pruning results file.
 - `--output_file`, `-o`: Output result file.
 - `--training_file`, `-t`: Training file.
 - `--method_to_process`, `-m`: Index of the Method to process (integer).
@@ -104,7 +104,7 @@ Options:
 #### Example
 
 ```sh
-python laurel_main.py llm config.yaml -p pruning.csv -o output.txt -t training.txt -m 1
+python laurel_main.py llm config.yaml -p pruning.csv -o output.csv -t training.csv -m 1
 ```
 
 ### Main experiment script
@@ -114,6 +114,14 @@ To run the Placeholder experiments (RQ1 and RQ2):
 ```sh
 make run_placeholder
 ```
+
+### Generate the graphs
+
+This command will generate the graphs from the saved results so that you do not have to rerun the whole experiments.
+```sh
+make generate_graphs
+```
+You will find the newly generated graphs in the `./fig` directory.
 
 ## Reusability
 
