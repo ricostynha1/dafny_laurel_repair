@@ -1,5 +1,5 @@
 Results_dir: ./results
-#Project_path: /usr/local/home/eric/dafny_repos/libraries/src
-Project_path: /usr/local/home/eric/dafny_repos/libraries/src/Collections/Sets
+#Project_path: ./DafnyGym/ground_truth/libraries/src
+Project_path: ./DafnyGym/ground_truth/libraries/src/Collections/Sets
 Dafny_args: "--use-basename-for-filename --cores:2 --verification-time-limit:300 --disable-nonlinear-arithmetic"
 Stats_file: ./results/stats_pruning_libraries_test.txt

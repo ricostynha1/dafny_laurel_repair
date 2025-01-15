@@ -1,4 +1,4 @@
 Results_dir: ./results
-Project_path: /usr/local/home/eric/dafny_repos/Dafny-VMC
-Dafny_args: "--library /usr/local/home/eric/dafny_repos/Dafny-VMC/src/**/*.dfy --resource-limit 20000"
+Project_path: ./DafnyGym/ground_truth/Dafny-VMC
+Dafny_args: "--library ./DafnyGym/ground_truth/Dafny-VMC/src/**/*.dfy --resource-limit 20000"
 Stats_file: ./results/stats_pruning_dafnyVMC.txt

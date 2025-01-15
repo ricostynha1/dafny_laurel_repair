@@ -1,4 +1,4 @@
 Results_dir: ./results
-Project_path: /usr/local/home/eric/dafny_repos/cedar-spec/cedar-dafny
+Project_path: ./DafnyGym/ground_truth/cedar-spec/cedar-dafny
 Dafny_args: "--verification-time-limit:300"
 Stats_file: ./results/stats_pruning_cedar.txt
