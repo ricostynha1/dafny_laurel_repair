@@ -21,6 +21,8 @@ def call_placeholder_finder(
         str(multiple_locations),
     ]
     if optional_files:
+        if not os.path.isabs(optional_files):
+            optional_files = os.path.abspath(os.path.normpath(optional_files))
         command.append(optional_files)
     if blacklisted_file:
         command.append(blacklisted_file)
