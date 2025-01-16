@@ -12,8 +12,6 @@ This artifact contains the github repository `https://github.com/emugnier/dafny_
 We are only going for the Available, Functionnal and maybe reusable badge.
 Our experiments take 3 days to be fully reproduced, therefore we advise to reproduce the graphs using our saved results.
 
-**We are aware that they are issues with the Docker container, we are working on resolving them.**
-
 ## Hardware dependencies
 
 No particular hardware dependencies are required. The Docker image is less than 2GB, and the experiments can be run on a laptop.
@@ -25,8 +23,8 @@ Although unlikely, hardware differences might affect the verification results.
 
 ### Setup the Environment
 
-Add the OpenAI key to the secrets file at `./.secrets.yaml`:
-```
+Add the OpenAI key to the secrets file at `./.secrets.yaml` (create this file if it does not exist) :
+```yaml
 OPENAI_API_KEY: HASH_OF_THE_KEY
 ```
 
@@ -34,6 +32,11 @@ Instruction for the Docker image:
 ```sh
 docker build -t laurel .
 docker run -it -v ./.secrets.yaml:/dafny_repair/.secrets.yaml -v ./fig:/dafny_repair/fig -p 8866:8866 -p 8889:8889 laurel
+```
+
+If you are on Apple Silicon run this command instead to build the docker:
+```sh
+docker buildx build --platform linux/amd64 -t laurel
 ```
 
 All of the following commands should be run in the Docker container.
@@ -101,11 +104,13 @@ Options:
 - `--training_file`, `-t`: Training file.
 - `--method_to_process`, `-m`: Index of the Method to process (integer).
 
-#### Example
+#### Examples
 
 ```sh
 python laurel_main.py llm config.yaml -p pruning.csv -o output.csv -t training.csv -m 1
 ```
+
+For examples of this command, refer to the [Makefile](Makefile) where you can also see examples of files that you should provide as argument.
 
 ### Main experiment script
 
@@ -147,5 +152,6 @@ You will find the newly generated graphs in the `./fig` directory.
 │   └── tokenizer_csharp # Convert Dafny code to Tokens
 ├── logs
 ├── notebooks
-├── results
+├── saved_results # Saved Results to reproduce the graphs
+├── scripts # Scripts to run the experiment and generate the graphs
 ```
