@@ -56,6 +56,9 @@ RUN poetry --version
 RUN git clone --recurse-submodules https://github.com/emugnier/dafny_repair.git
 WORKDIR dafny_repair
 RUN mkdir logs && touch logs/pruning.log
+RUN cd laurel/placeholder_finder && dotnet restore && dotnet build
+RUN cd laurel/tokenizer_csharp && dotnet restore && dotnet build
+
 
 # Default command
 CMD ["/bin/bash"]
