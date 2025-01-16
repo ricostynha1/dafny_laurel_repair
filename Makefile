@@ -31,5 +31,17 @@ gen_report_getting_started: run_lib_baseline run_lib_similarity run_cedar_baseli
 generate_graphs: poetry_install
 	poetry run python scripts/placeholder.py && poetry run python scripts/similarity.py
 
-exp_placeholder:
-	 python laurel/exp_launcher.py ./configs/main/exp.yaml
+exp_placeholder: poetry_install
+	 poetry run python laurel/exp_launcher.py ./configs/main/exp.yaml
+
+exp_similarity: poetry_install
+	@if [ ! -d "DafnyGym/tmp_vmc" ]; then \
+		cd DafnyGym && poetry run python nfold.py --dataset vmc; \
+	fi
+	@if [ ! -d "DafnyGym/tmp_cedar" ]; then \
+		cd DafnyGym && poetry run python nfold.py --dataset cedar; \
+	fi
+	@if [ ! -d "DafnyGym/tmp_libraries" ]; then \
+		cd DafnyGym && poetry run python nfold.py --dataset libraries; \
+	fi
+	 poetry run python scripts/launch_nfold.py --dataset libraries && poetry run python scripts/launch_nfold.py --dataset cedar && poetry run python scripts/launch_nfold.py --dataset DafnyVMC

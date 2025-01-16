@@ -23,7 +23,7 @@ from select_example import ExamplesSelector
 logger = logging.getLogger(__name__)
 
 # TODO: pass this as a configuration parameter
-SERVER_NAME = "http://c10-10.sysnet.ucsd.edu:8866/"
+SERVER_NAME = "http://localhost:8866/"
 
 
 def generate_notebook_url(result_file, assertion_file, method_index):

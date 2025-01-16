@@ -108,12 +108,19 @@ python laurel_main.py llm config.yaml -p pruning.csv -o output.csv -t training.c
 ```
 
 ### Main experiment script
-To facilitate the experiments, we created scripts that run laurel using the different configurations and benchmarks.
+
+To facilitate the experiments, we created scripts that run laurel using the different configurations and benchmarks. ** These scripts takes multiple days and use a lot of GPT credits ** They are just an extension of the getting started. If you want to reproduce the results see next section.
 
 To run the Placeholder experiments (RQ1 and RQ2):
 ```sh
-make run_placeholder
+make exp_placeholder
 ```
+
+To run the Similarity experiments (RQ3):
+```sh
+make exp_similarity
+```
+
 
 ### Generate the graphs
 
