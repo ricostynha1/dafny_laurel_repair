@@ -41,8 +41,8 @@ docker buildx build --platform linux/amd64 -t laurel .
 
 __WARNING__: There is a [known issue](https://github.com/docker/buildx/issues/2021) when running `dotnet` in a Docker system using the `vfs` storage driver.
 You can check your installation by running `docker info`.
-If this is the case for you, please use another system for artifact testing.
-We have no workaround for this at this time.
+If this is the case for you, the image build will most likely fail.
+Please use another system for artifact testing, we have no workaround for this at this time.
 
 3. Run a new container with the artifact image
 ```sh
