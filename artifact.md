@@ -23,23 +23,33 @@ Although unlikely, hardware differences might affect the verification results.
 
 ### Setup the Environment
 
-Add the OpenAI key to the secrets file at `./.secrets.yaml` (create this file if it does not exist) :
+1. Copy the provided `./.secrets.yaml` at the root directory of the project.
+It should have the following format:
 ```yaml
-OPENAI_API_KEY: HASH_OF_THE_KEY
+OPENAI_API_KEY: <KEY>
 ```
 
-Instruction for the Docker image:
+2. Build the Docker image:
 ```sh
 docker build -t laurel .
-docker run -it -v ./.secrets.yaml:/dafny_repair/.secrets.yaml -v ./fig:/dafny_repair/fig -p 8866:8866 -p 8889:8889 laurel
 ```
 
-If you are on Apple Silicon run this command instead to build the docker:
+Or if you are on Apple Silicon run instead:
 ```sh
 docker buildx build --platform linux/amd64 -t laurel .
 ```
 
-All of the following commands should be run in the Docker container.
+__WARNING__: There is a [known issue](https://github.com/docker/buildx/issues/2021) when running `dotnet` in a Docker system using the `vfs` storage driver.
+You can check your installation by running `docker info`.
+If this is the case for you, please use another system for artifact testing.
+We have no workaround for this at this time.
+
+3. Run a new container with the artifact image
+```sh
+docker run -it -v ./.secrets.yaml:/dafny_repair/.secrets.yaml -v ./fig:/dafny_repair/fig -p 8866:8866 -p 8889:8889 laurel
+```
+
+All of the subsequent commands should be run in the Docker container.
 
 ### Generate one assertion
 
