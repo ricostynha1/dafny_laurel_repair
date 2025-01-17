@@ -46,7 +46,7 @@ All of the following commands should be run in the Docker container.
 ```bash
 make gen_report_getting_started
 ```
-You should now be able to click on the link that appears on your terminal and inspect the results.
+You should now be able to access the report on your browser at the address `localhost:8889` and inspect the results.
 
 ## Step by step
 
