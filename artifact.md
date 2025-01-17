@@ -36,7 +36,7 @@ docker run -it -v ./.secrets.yaml:/dafny_repair/.secrets.yaml -v ./fig:/dafny_re
 
 If you are on Apple Silicon run this command instead to build the docker:
 ```sh
-docker buildx build --platform linux/amd64 -t laurel
+docker buildx build --platform linux/amd64 -t laurel .
 ```
 
 All of the following commands should be run in the Docker container.
