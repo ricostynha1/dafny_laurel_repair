@@ -26,11 +26,11 @@ namespace placeholder
         Forall,
         Calc,
         Constructed,
-         // ricostynha added 
-         TimeOut,
-         SubsetConstraints,
-         ElementNotInDomain, 
-         // ricostynha end added 
+        // ricostynha added 
+        TimeOut,
+        SubsetConstraints,
+        ElementNotInDomain, 
+        // ricostynha end added 
         Unknown
     }
 
@@ -44,6 +44,9 @@ namespace placeholder
         public DafnyErrorType ErrorType { get; set; }
         public List<DafnyError> RelatedErrors { get; set; } = new List<DafnyError>();
         public Statement SourceStatement { get; set; }
+        
+        public Token EndToken { get; set; }
+        public bool IsOnFunction { get; set; }
 
         public override string ToString()
         {
@@ -208,7 +211,7 @@ namespace placeholder
             {
                  return DafnyErrorType.ElementNotInDomain;    
             }
-             // ended added by ricostynha                
+             // ended added by ricostynha
             else
             {
                 return DafnyErrorType.Unknown;
@@ -232,6 +235,14 @@ namespace placeholder
         )
         {
             var errorLocations = new List<ErrorLocation>();
+            // ricostynha added this
+            if (error.IsOnFunction)
+            { // Only one valid place at end of function to insert assertions
+                errorLocations = AssignAtEndOfBlock(program, uri, error, multiple_location);
+                return errorLocations;
+            }
+                
+                
             switch (error.ErrorType)
             {
                 case DafnyErrorType.Assertion:
@@ -271,7 +282,7 @@ namespace placeholder
                 case DafnyErrorType.ElementNotInDomain:
                     errorLocations = AssignErrorLocation(program, uri, error, multiple_location);
                     break;
-                // end ricostynha added              
+                // end ricostynha added
                 default:
                     // ricostynha modified it  from
                     // throw new ArgumentException("Invalid error type");
@@ -458,10 +469,22 @@ namespace placeholder
         )
         {
             var errorLocations = new List<ErrorLocation>();
-            var token = error.SourceStatement.EndToken;
-            this.File = token.filename;
-            this.Line = token.line;
-            this.Column = token.col;
+            if (error.IsOnFunction)
+            {
+                var token = error.EndToken;
+                this.File = error.File;
+                this.Line = error.Line;
+                this.Column = error.Column;
+            }
+            else
+            {
+                var token = error.SourceStatement.EndToken;  
+                this.File = token.filename;
+                this.Line = token.line;
+                this.Column = token.col;
+            }
+
+
             // if (multiple_location)
             // {
             //     var node = error.SourceStatement;
@@ -543,6 +566,7 @@ namespace placeholder
             var error = FindMatchingError(method.Body, errorMessages);
             if (error != null)
             {
+                error.IsOnFunction = false;
                 return error;
             }
 
@@ -554,6 +578,29 @@ namespace placeholder
             var error = FindMatchingError(lemma.Body, errorMessages);
             if (error != null)
             {
+                error.IsOnFunction = false;
+                return error;
+            }
+
+            return null;
+        }
+        // Ricostynha added for function
+        public static DafnyError IdentifyPriorityError(
+            Uri uri,
+            Program program,
+            Function function,
+            List<DafnyError> errorMessages
+        )
+        {
+           // In fucntions there is onlt one valid place for assertions
+            foreach (var message in (errorMessages))
+            {
+                var error = new DafnyError();
+                error.File = message.File;
+                error.Line = message.Line;
+                error.Column = message.Column;
+                error.EndToken = message.EndToken;
+                error.IsOnFunction = true;
                 return error;
             }
 
@@ -775,6 +822,7 @@ namespace placeholder
             return null;
         }
         */
+
         public static List<string> InsertPlaceholderAtLine(
             List<string> lines,
             int line,
@@ -785,7 +833,7 @@ namespace placeholder
             // File.WriteAllLines(filename, lines);
             return lines;
         }
-
+        
         public static Dictionary<Uri, string> AddFilesToFs(
             string methodFile,
             string additionalFilesDir = "",
@@ -866,8 +914,22 @@ namespace placeholder
                 blacklistedFile = args.Length > 4 ? args[4] : null; // default value is null
             }
 
-            string input;
-            input = Console.In.ReadToEnd();
+
+            string input =
+                @"  /tmp/dafny_thread_1169776_dhj5yoq7/temp_1169776_135138262607744.dfy(112,6): Error: a postcondition could not be proved on this return path
+                   |
+               112 |       items
+                   |       ^^^^^
+               
+               /tmp/dafny_thread_1169776_dhj5yoq7/temp_1169776_135138262607744.dfy(108,20): Related location: this is the postcondition that could not be proved
+                   |
+               108 |       ensures items == this.content().Items
+                   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+               
+               
+               Dafny program verifier finished with 28 verified, 1 error";
+
+            //string input = Console.In.ReadToEnd();
             if (!Path.IsPathRooted(methodFile))
             {
                 methodFile = Path.GetFullPath(methodFile);
@@ -943,14 +1005,33 @@ namespace placeholder
                 }
             }
             DafnyError error = null;
-            if (declaration is Method method)
-            {
-                error = IdentifyPriorityError(uri, program, method, errors);
-            }
-            else if (declaration is Lemma lemma)
+            // Ricostynha changed order old
+            //if (declaration is Method method)
+            //{
+            //    error = IdentifyPriorityError(uri, program, method, errors);
+            //}
+            //else if (declaration is Lemma lemma)
+            //{
+            //    error = IdentifyPriorityError(lemma, errors);
+            //}
+            //Now
+            // Ricostynha changed order old
+            if (declaration is Lemma lemma)
             {
                 error = IdentifyPriorityError(lemma, errors);
             }
+            else if (declaration is Method method)
+            {
+                error = IdentifyPriorityError(uri, program, method, errors);
+              
+            }
+            // Ricostynha added function 
+            else if (declaration is Function function)
+            {
+                error = IdentifyPriorityError(uri, program, function, errors);
+              
+            }     
+            // End modified
             else
             {
                 throw new Exception("declaration not supported: " + declaration.GetType());

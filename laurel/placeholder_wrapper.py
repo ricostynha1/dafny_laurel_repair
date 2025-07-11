@@ -4,7 +4,7 @@ import os
 # ricostynha modified dotnet version
 # before PLACEHOLDER_CSHARP_PATH = "placeholder_finder/bin/Debug/net6.0/placeholder_finder"
 # after
-PLACEHOLDER_CSHARP_PATH = "placeholder_finder/bin/Debug/net8.0/placeholder_finder"
+PLACEHOLDER_CSHARP_PATH = "placeholder_finder/bin/Debug/net6.0/placeholder_finder"
 logger = logging.getLogger(__name__)
 
 
@@ -32,8 +32,9 @@ def call_placeholder_finder(
         result = subprocess.run(
             command, input=error_message, capture_output=True, text=True, check=True
         )
+
+    
     except subprocess.CalledProcessError as e:
-        print(e.stdout)
         # ricostynha modified error logger to be easier to use in following scripts
         # before
         #logger.error(f"Error in call_placeholder_finder: {str(e.stderr)}")
@@ -41,18 +42,26 @@ def call_placeholder_finder(
         #    f"Arguments were: method_file={method_file}, method_name={method_name}, optional_files={optional_files}, blacklisted_file={blacklisted_file}"
         #)
         #return ""
-        
         # after 
         error = e.stdout
         error += f"Error in call_placeholder_finder: {str(e.stderr)}"
         error +=  f"Arguments were: method_file={method_file}, method_name={method_name}, optional_files={optional_files}, blacklisted_file={blacklisted_file}"
+        print(error)
+        return "", error   
+
+    except Exception as e:
+        # general fallback for any other exception
+        error = f"Unexpected error: {str(e)}"
+        error +=  f"Arguments were: method_file={method_file}, method_name={method_name}, optional_files={optional_files}, blacklisted_file={blacklisted_file}"
+        print(error)
         return "", error
+    
 
     output = result.stdout.strip()
     #before
     #print(output)
     #return output
     #after
-    #print(output)
+    #print(f"Output is {output}")
     return output, ""
 
