@@ -1,8 +1,10 @@
 import logging
 import subprocess
 import os
-
-PLACEHOLDER_CSHARP_PATH = "placeholder_finder/bin/Debug/net6.0/placeholder_finder"
+# ricostynha modified dotnet version
+# before PLACEHOLDER_CSHARP_PATH = "placeholder_finder/bin/Debug/net6.0/placeholder_finder"
+# after
+PLACEHOLDER_CSHARP_PATH = "placeholder_finder/bin/Debug/net8.0/placeholder_finder"
 logger = logging.getLogger(__name__)
 
 
@@ -32,11 +34,25 @@ def call_placeholder_finder(
         )
     except subprocess.CalledProcessError as e:
         print(e.stdout)
-        logger.error(f"Error in call_placeholder_finder: {str(e.stderr)}")
-        logger.error(
-            f"Arguments were: method_file={method_file}, method_name={method_name}, optional_files={optional_files}, blacklisted_file={blacklisted_file}"
-        )
-        return ""
+        # ricostynha modified error logger to be easier to use in following scripts
+        # before
+        #logger.error(f"Error in call_placeholder_finder: {str(e.stderr)}")
+        #logger.error(
+        #    f"Arguments were: method_file={method_file}, method_name={method_name}, optional_files={optional_files}, blacklisted_file={blacklisted_file}"
+        #)
+        #return ""
+        
+        # after 
+        error = e.stdout
+        error += f"Error in call_placeholder_finder: {str(e.stderr)}"
+        error +=  f"Arguments were: method_file={method_file}, method_name={method_name}, optional_files={optional_files}, blacklisted_file={blacklisted_file}"
+        return "", error
+
     output = result.stdout.strip()
-    print(output)
-    return output
+    #before
+    #print(output)
+    #return output
+    #after
+    #print(output)
+    return output, ""
+
