@@ -26,11 +26,6 @@ namespace placeholder
         Forall,
         Calc,
         Constructed,
-         // ricostynha added 
-         TimeOut,
-         SubsetConstraints,
-         ElementNotInDomain, 
-         // ricostynha end added 
         Unknown
     }
 
@@ -194,21 +189,6 @@ namespace placeholder
             {
                 return DafnyErrorType.Constructed;
             }
-            // added by ricostynha
-            else if (errorMessage.Contains("timed out after"))
-            {
-                return DafnyErrorType.TimeOut;
-            }
-            else if (errorMessage.Contains("value does not satisfy the subset constraints of"))
-            {
-                return DafnyErrorType.SubsetConstraints;
-            }
-           
-            else if (errorMessage.Contains("element might not be in domain"))
-            {
-                 return DafnyErrorType.ElementNotInDomain;    
-            }
-             // ended added by ricostynha                
             else
             {
                 return DafnyErrorType.Unknown;
@@ -258,27 +238,8 @@ namespace placeholder
                 case DafnyErrorType.Constructed:
                     errorLocations = AssignErrorLocation(program, uri, error, multiple_location);
                     break;
-                // ricostynha added
-                case DafnyErrorType.LoopInvariant:
-                    errorLocations = AssignAtEndOfBlock(program, uri, error, multiple_location);
-                    break;
-                case DafnyErrorType.TimeOut:
-                    errorLocations = AssignErrorLocation(program, uri, error, multiple_location);
-                    break;
-                case DafnyErrorType.SubsetConstraints:
-                    errorLocations = AssignErrorLocation(program, uri, error, multiple_location);
-                    break;
-                case DafnyErrorType.ElementNotInDomain:
-                    errorLocations = AssignErrorLocation(program, uri, error, multiple_location);
-                    break;
-                // end ricostynha added              
                 default:
-                    // ricostynha modified it  from
-                    // throw new ArgumentException("Invalid error type");
-                    // Unsuported loop invariant Error by original Laurel tool
-                    // Majority They fall here but not all
-                    throw new ArgumentException( $"Invalid error type (Not supported: {error.ErrorType}).");
-                   //throw new ArgumentException("Invalid error type");
+                    throw new ArgumentException("Invalid error type");
             }
             return errorLocations;
         }
@@ -560,102 +521,13 @@ namespace placeholder
             return null;
         }
 
-        // Ricostynha added comment Ricostynha completed rewrite
-        // This function has the objective to add the sourceStatement to the error in the messages and to return that error.
-        // This can be done in a super easier way using AST visitor of Dafny
-
-        // This implementation causes a lot of error for now need to really check what the other is doing more carefully
-        
         private static DafnyError FindMatchingError(
             Statement statement,
             List<DafnyError> errorMessages
         )
         {
-            foreach (var error in (errorMessages))
-            {
-                var visitor = new FindExpressionAndParentByTokenVisitor(error.Line, error.Column);
-                visitor.VisitManual(statement);
-
-                if (visitor.MatchingStatementWithAllParent.Count == 0) {
-                    return error;
-                }
-                
-                var (generalStmt, parents) = visitor.MatchingStatementWithAllParent[0];
-                error.SourceStatement = generalStmt;
-                return error;
-            }
-
-            return null;
-        }
-        
-        // Visitor to find expression and its parent by token
-        private class FindExpressionAndParentByTokenVisitor : ASTVisitor<IASTVisitorContext> {
-            public readonly List<(Statement Stmt, INode Parent)> MatchingStatement = new();
-            public readonly List<(Statement Stmt, Stack<INode> Parents)> MatchingStatementWithAllParent = new();
-            private readonly int line;
-            private readonly int col;
-            private readonly Stack<INode> parents = new();
-
-            public FindExpressionAndParentByTokenVisitor(int line, int col) {
-                this.line = line;
-                this.col = col;
-            }
-
-            public override IASTVisitorContext GetContext(IASTVisitorContext context, bool inFunctionPostcondition) {
-                return context;
-            }
-
-            public void VisitManual(Statement stmt)
-            {
-                VisitStatement(stmt, null);
-            }
-            protected override void VisitStatement(Statement stmt, IASTVisitorContext context) {
-
-      
-                if (TokensInStatement(stmt)) { // in case of asset this will be an assert
-                    var parent = parents.Count > 0 ? parents.Peek() : null;
-                    if (parent is Node node) {
-                        MatchingStatement.Add((stmt, node));
-                        var parentsCopy = new Stack<INode>(parents); 
-                        MatchingStatementWithAllParent.Add((stmt, parentsCopy));
-                    }
-                }
-                parents.Push(stmt);
-                base.VisitStatement(stmt, context);
-                parents.Pop();
-            }
-            
-            private bool TokensInStatement(Statement stmt)
-            {
-                int end_line = stmt.EndToken.line;
-                int end_col = stmt.EndToken.col;
-                
-                int start_line = stmt.StartToken.line;
-                int start_col = stmt.StartToken.col;
-                if (start_line <= line  && line <= end_line &&  start_col <= col  && col <= end_col ) {
-                        return true;
-                }
-                return false;
-            }
-        }
-        
-        /*
-        
-        private static DafnyError FindMatchingError(
-            Statement statement,
-            List<DafnyError> errorMessages
-        )
-        {
-            // ricostynha added
-            if (statement == null) return null;  // Early exit
-            
             foreach (var error in errorMessages)
             {
-                // ricostynha added
-                if (error.SourceStatement == null)
-                {
-                    continue;
-                }
                 if (error.SourceStatement.Tok.line == statement.Tok.line)
                 {
                     return error;
@@ -774,7 +646,7 @@ namespace placeholder
 
             return null;
         }
-        */
+
         public static List<string> InsertPlaceholderAtLine(
             List<string> lines,
             int line,

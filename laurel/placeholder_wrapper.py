@@ -4,7 +4,9 @@ import os
 # ricostynha modified dotnet version
 # before PLACEHOLDER_CSHARP_PATH = "placeholder_finder/bin/Debug/net6.0/placeholder_finder"
 # after
-PLACEHOLDER_CSHARP_PATH = "placeholder_finder/bin/Debug/net6.0/placeholder_finder"
+PLACEHOLDER_LAUREL_CSHARP_PATH = "placeholder_finder/bin/Debug/net6.0/placeholder_finder"
+PLACEHOLDER_LAUREL_BETTER_CSHARP_PATH = "placeholder_finder_better/bin/Debug/net6.0/placeholder_finder_laurel_better"
+
 logger = logging.getLogger(__name__)
 
 
@@ -12,12 +14,18 @@ def call_placeholder_finder(
     error_message,
     method_file,
     method_name,
+    use_laurel_better=False,
     optional_files=None,
     blacklisted_file=None,
     multiple_locations=False,
 ):
+    if(use_laurel_better):
+        placeholder_path_exec = PLACEHOLDER_LAUREL_BETTER_CSHARP_PATH 
+    else:
+        placeholder_path_exec = PLACEHOLDER_LAUREL_CSHARP_PATH 
+
     command = [
-        os.path.join(os.path.dirname(__file__), PLACEHOLDER_CSHARP_PATH),
+        os.path.join(os.path.dirname(__file__), placeholder_path_exec),
         method_file,
         method_name,
         str(multiple_locations),
